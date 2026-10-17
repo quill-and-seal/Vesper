@@ -218,22 +218,15 @@ export const BUILTIN_PATCHES = {
     icon: "fa-solid fa-fire",
     intensity: "wind",
     fixed: 0.45,
+    volume: -2,
     layers: [
       {
         id: "roar",
         label: "Grondement",
-        source: { type: "noise", color: "white" },
-        filters: [{ type: "highpass", freq: 45, q: 0.7 }, { type: "lowpass", freq: r(300, 750), q: 0.6 }],
-        gain: r(0.22, 0.6),
-        mods: [{ target: "gain", kind: "jitter", rate: r(4, 9), depth: r(0.25, 0.5) }]
-      },
-      {
-        id: "hiss",
-        label: "Souffle",
-        source: { type: "noise", color: "white" },
-        filters: [{ type: "highpass", freq: 2800, q: 0.7 }, { type: "lowpass", freq: 9000, q: 0.7 }],
-        gain: r(0.02, 0.06),
-        mods: [{ target: "gain", kind: "lfo", rate: 0.13, depth: 0.4 }]
+        source: { type: "noise", color: "brown" },
+        filters: [{ type: "highpass", freq: 40, q: 0.7 }, { type: "lowpass", freq: r(160, 300), q: 0.7 }, { type: "lowpass", freq: r(160, 300), q: 0.7 }],
+        gain: r(0.08, 0.2),
+        mods: [{ target: "gain", kind: "jitter", rate: r(4, 9), depth: r(0.3, 0.55) }]
       },
       {
         id: "crackle",
@@ -264,9 +257,9 @@ export const BUILTIN_PATCHES = {
       {
         id: "flame",
         label: "Flamme",
-        source: { type: "noise", color: "white" },
-        filters: [{ type: "highpass", freq: 80, q: 0.7 }, { type: "lowpass", freq: r(450, 900), q: 0.8 }],
-        gain: r(0.25, 0.7),
+        source: { type: "noise", color: "brown" },
+        filters: [{ type: "highpass", freq: 60, q: 0.7 }, { type: "lowpass", freq: r(220, 420), q: 0.8 }, { type: "lowpass", freq: r(220, 420), q: 0.7 }],
+        gain: r(0.1, 0.25),
         mods: [{ target: "gain", kind: "jitter", rate: r(10, 18), depth: r(0.4, 0.7) }, { target: "filters.1.freq", kind: "jitter", rate: 6, depth: 0.3 }]
       },
       {
@@ -276,7 +269,7 @@ export const BUILTIN_PATCHES = {
           type: "events", rate: r(1.5, 6), regularity: 0, burstChance: 0.15, burstMin: 2, burstMax: 4, burstGap: 0.02,
           grain: "noise", decay: 0.8, ring: 0.1, freqMin: 2500, freqMax: 8000, q: 1, drop: 1, ampMin: 0.04, ampMax: 0.3, skew: 2.5, spread: 0.1
         },
-        gain: 2.5
+        gain: 4.5
       }
     ]
   },

@@ -104,8 +104,9 @@
       }
     },
     "Controls": {
-      "Soundscape": "Paysage sonore (Vesper)",
-      "Workshop": "Atelier sonore (Vesper)"
+      "Soundscape": "Paysage sonore",
+      "Workshop": "Atelier sonore",
+      "Group": "Vesper — son immersif"
     },
     "Soundscape": {
       "Title": "Paysage sonore — {scene}",

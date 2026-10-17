@@ -29,7 +29,6 @@ function newId() {
 /** Modèles de paysages : la structure est prête, il reste à choisir ses fichiers. */
 export const TEMPLATES = {
   forest: () => [
-    { label: t("Template.Layer.Wind"), kind: "synth", synth: "wind", volume: -20 },
     { label: t("Template.Layer.Birds"), kind: "scatter", volume: -14, when: { time: "day" }, scatter: { min: 4, max: 14 } },
     { label: t("Template.Layer.NightCritters"), kind: "synth", synth: "crickets", volume: -14, when: { time: "night" } },
     { label: t("Template.Layer.Dread"), kind: "synth", synth: "drone", volume: -22, outdoor: false, when: { tensionMin: 2 } }
@@ -46,8 +45,7 @@ export const TEMPLATES = {
   ],
   camp: () => [
     { label: t("Template.Layer.Fire"), kind: "synth", synth: "fire", volume: -8 },
-    { label: t("Template.Layer.NightCritters"), kind: "synth", synth: "crickets", volume: -16, when: { time: "night" } },
-    { label: t("Template.Layer.Wind"), kind: "synth", synth: "wind", volume: -22 }
+    { label: t("Template.Layer.NightCritters"), kind: "synth", synth: "crickets", volume: -16, when: { time: "night" } }
   ],
   dungeon: () => [
     { label: t("Template.Layer.Dread"), kind: "synth", synth: "drone", volume: -24, outdoor: false },

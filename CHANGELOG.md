@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Vesper a sa propre case dans la barre de gauche (icône d'oreille), avec le paysage sonore et l'atelier sonore ; le groupe Sons de Foundry n'est plus modifié.
+- Feu de camp et torche : plus de souffle qui faisait penser à du vent. Le grondement est grave et sourd, les crépitements ressortent mieux.
+- Les modèles de paysage Forêt et Campement n'ajoutent plus de couche de vent (la Tempête la garde).
+
 ## 0.2.0
 
 - Moteur de sons procéduraux : sons calculés en direct à partir de couches (bruit, oscillateur, événements aléatoires), de filtres et de modulations, avec des paramètres liés à l'intensité.

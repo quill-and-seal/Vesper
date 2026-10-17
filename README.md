@@ -47,7 +47,7 @@ La réverbération est celle du lieu où se tient le token, avec un fondu quand 
 
 ## 3. Le paysage sonore (ambiances dynamiques)
 
-Bouton **Paysage sonore (Vesper)** dans le calque **Sons** (icône d'oreille). Une scène a des **couches** qui entrent et sortent en fondu selon leurs conditions :
+Dans la barre de gauche, la case **Vesper** (icône d'oreille) → **Paysage sonore**. Une scène a des **couches** qui entrent et sortent en fondu selon leurs conditions :
 
 - **Boucle** : un fichier en boucle (foule, rivière lointaine, vent).
 - **Sons dispersés** : des sons ponctuels à intervalles irréguliers, à gauche, à droite, près ou loin, avec une légère variation de hauteur (oiseaux, craquements, tonnerre). Le calendrier dépend de l'heure du serveur : **tous les joueurs entendent le même coup de tonnerre au même moment**, du même côté.
@@ -65,9 +65,9 @@ Un son procédural est **calculé en direct** au lieu d'être lu dans un fichier
 
 **Les utiliser**
 - **Sur la carte** : pose un son d'ambiance comme d'habitude, et choisis un **Son procédural** dans la section Vesper de sa fenêtre (le fichier se remplit tout seul). Distance, murs et réverbération s'appliquent comme pour un fichier. Le champ **Intensité** fixe la taille du feu (vide : il suit le vent).
-- **Dans le paysage sonore** : une **couche générée** propose les mêmes sons. Le modèle « Campement » pose un feu, des grillons la nuit et un peu de vent.
+- **Dans le paysage sonore** : une **couche générée** propose les mêmes sons. Le modèle « Campement » pose un feu et des grillons la nuit.
 
-**L'atelier sonore** (bouton fiole dans le calque Sons) sert à créer ses propres sons. Une recette est un empilement de **couches** :
+**L'atelier sonore** (case **Vesper** → bouton fiole) sert à créer ses propres sons. Une recette est un empilement de **couches** :
 
 | Source | Pour faire |
 |---|---|

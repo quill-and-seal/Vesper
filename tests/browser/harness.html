@@ -243,20 +243,20 @@
     await click('[data-action="duplicate"]');
     const dupId = ws.patchId;
     const dupEditable = ws.element.querySelectorAll("input[disabled]").length === 0;
-    const rateA = ws.element.querySelector('[name="layers.2.source.rate.a"]');
+    const rateA = ws.element.querySelector('[name="layers.1.source.rate.a"]');
     rateA.value = "2";
     rateA.dispatchEvent(new Event("change", { bubbles: true }));
     await ws.lastSubmit;
     await sleep(400);
-    const savedRate = game.settings.get("vesper-audio", "patches")[dupId]?.layers?.[2]?.source?.rate;
+    const savedRate = game.settings.get("vesper-audio", "patches")[dupId]?.layers?.[1]?.source?.rate;
     // Ajouter une couche d'événements, un filtre et une modulation, puis délier une valeur
     await ws.render();
     await click('[data-action="addLayer"][data-type="events"]');
     const nLayers = game.settings.get("vesper-audio", "patches")[dupId].layers.length;
-    await click('[data-action="addFilter"][data-index="4"]');
-    await click('[data-action="addMod"][data-index="4"]');
-    await click('[data-action="link"][data-path="layers.4.source.rate"]');
-    const last = game.settings.get("vesper-audio", "patches")[dupId].layers[4];
+    await click('[data-action="addFilter"][data-index="3"]');
+    await click('[data-action="addMod"][data-index="3"]');
+    await click('[data-action="link"][data-path="layers.3.source.rate"]');
+    const last = game.settings.get("vesper-audio", "patches")[dupId].layers[3];
     // Écoute dans l'atelier
     await click('[data-action="play"]');
     const playing = !!ws.player;
@@ -280,6 +280,11 @@
     fakeHtml.innerHTML = "<div class=form-group></div><footer class=form-footer></footer>";
     await Hooks.call("renderAmbientSoundConfig", { document: T.makeSound("cfg", 0, 0), setPosition() {} }, fakeHtml);
     log("soundConfig", [...fakeHtml.querySelectorAll(".vesper-sound-config input")].map((i) => i.name));
+
+    // N. Case Vesper dans la barre de gauche
+    const controls = { tokens: { order: 0, tools: {} }, sounds: { order: 9, tools: {} } };
+    await Hooks.call("getSceneControlButtons", controls);
+    log("controls", { group: !!controls.vesper, order: controls.vesper?.order, tools: Object.keys(controls.vesper?.tools ?? {}), soundsUntouched: Object.keys(controls.sounds.tools).length === 0 });
 
     clearInterval(tick);
     window.__done = { ok: true, results };

@@ -104,8 +104,9 @@
       }
     },
     "Controls": {
-      "Soundscape": "Soundscape (Vesper)",
-      "Workshop": "Sound workshop (Vesper)"
+      "Soundscape": "Soundscape",
+      "Workshop": "Sound workshop",
+      "Group": "Vesper — immersive sound"
     },
     "Soundscape": {
       "Title": "Soundscape — {scene}",

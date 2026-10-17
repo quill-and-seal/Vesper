@@ -151,30 +151,35 @@ Hooks.once("ready", () => {
 
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!game.user.isGM) return;
-  const tools = [
-    {
-      name: "vesper-soundscape",
+  const button = (fn) => ({ button: true, onChange: fn });
+  const tools = {
+    soundscape: {
+      name: "soundscape",
       title: "VESPER.Controls.Soundscape",
-      icon: "fa-solid fa-ear-listen",
-      button: true,
-      order: 50,
-      onChange: () => new SoundscapeConfig(engine).render({ force: true })
+      icon: "fa-solid fa-tree",
+      order: 0,
+      ...button(() => new SoundscapeConfig(engine).render({ force: true }))
     },
-    {
-      name: "vesper-workshop",
+    workshop: {
+      name: "workshop",
       title: "VESPER.Controls.Workshop",
       icon: "fa-solid fa-flask",
-      button: true,
-      order: 51,
-      onChange: () => new Workshop(engine).render({ force: true })
+      order: 1,
+      ...button(() => new Workshop(engine).render({ force: true }))
     }
-  ];
-  const sounds = Array.isArray(controls) ? controls.find((c) => c.name === "sounds") : controls.sounds;
-  if (!sounds) return;
-  for (const tool of tools) {
-    if (Array.isArray(sounds.tools)) sounds.tools.push(tool);
-    else sounds.tools[tool.name] = tool;
-  }
+  };
+  // Sa propre case dans la barre de gauche, à côté des Sons de Foundry
+  const order = (Array.isArray(controls) ? null : controls.sounds?.order) ?? Object.keys(controls).length;
+  const control = {
+    name: "vesper",
+    title: "VESPER.Controls.Group",
+    icon: "fa-solid fa-ear-listen",
+    order: order + 0.5,
+    visible: true,
+    activeTool: "soundscape"
+  };
+  if (Array.isArray(controls)) controls.push({ ...control, tools: Object.values(tools) });
+  else controls.vesper = { ...control, tools };
 });
 
 /* -------------------------------------------- */
