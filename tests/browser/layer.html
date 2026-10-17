@@ -1,0 +1,72 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vesper — calque (PIXI réel)</title>
+<link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+<style>body{margin:0;background:#222} .fa-solid{position:absolute;opacity:0}</style>
+<!-- Force le chargement de la police d'icônes, comme la barre d'outils de Foundry -->
+<i class="fa-solid fa-fire"></i>
+<script src="/node_modules/pixi.js/dist/pixi.min.js"></script>
+<script src="./stub.js"></script>
+<script type="module">
+  const params = new URLSearchParams(location.search);
+  if (params.get("nofont")) document.querySelector("link[rel=stylesheet]").remove();
+  await document.fonts.ready;
+  // Traductions françaises, comme dans Foundry
+  const fr = await (await fetch("/lang/fr.json")).json();
+  game.i18n.localize = (k) => k.split(".").reduce((o, p) => o?.[p], fr) ?? k;
+  // Foundry : calque d'interaction = conteneur PIXI ; scène PIXI réelle
+  foundry.canvas.layers.InteractionLayer = class extends PIXI.Container {
+    static get layerOptions() { return {}; }
+    async draw() { await this._draw?.({}); return this; }
+    activate() { this._activate?.(); return this; }
+  };
+  foundry.utils.mergeObject = (a, b) => ({ ...a, ...b });
+  const app = new PIXI.Application({ width: 960, height: 640, background: 0x4a4236, antialias: true });
+  document.body.append(app.view);
+  canvas.app = app;
+  canvas.stage = app.stage;
+  canvas.stage.scale.set(Number(params.get("zoom") ?? 0.5));
+  canvas.canvasCoordinatesFromClient = ({ x, y }) => canvas.stage.toLocal(new PIXI.Point(x, y));
+  canvas.dimensions.sceneRect = { x: 0, y: 0, width: 1920, height: 1280 };
+  globalThis.ui.controls = { control: "vesper", tool: "select" };
+
+  await import("/scripts/main.js");
+  await Hooks.call("init");
+  await Hooks.call("setup");
+  await Hooks.call("ready");
+  await Hooks.call("canvasReady");
+  const api = game.modules.get("vesper-audio").api;
+
+  // Murs : une pièce avec une porte
+  for (const w of [[200,300,1000,300],[200,300,200,1100],[200,1100,1000,1100],[1000,300,1000,640],[1000,760,1000,1100]]) T.wall(...w);
+  T.wall(1000, 640, 1000, 760, { door: 1, ds: 1 });
+  // Sources : procédurales et fichier
+  T.makeSound("s1", 500, 700, { radius: 15, path: "modules/vesper-audio/synth/procedural.wav", flags: { "vesper-audio": { sound: { patch: "fire" } } } });
+  T.makeSound("s2", 1500, 400, { radius: 10, path: "modules/vesper-audio/synth/river.wav" });
+  T.makeSound("s3", 1500, 1000, { radius: 8, path: "sounds/taverne%20brouhaha.ogg" });
+  T.makeSound("s4", 700, 450, { radius: 6, path: "modules/vesper-audio/synth/procedural.wav", hidden: true, flags: { "vesper-audio": { sound: { patch: "crickets" } } } });
+  api.engine.spatial.sync();
+
+  const Layer = CONFIG.Canvas.layers.vesper.layerClass;
+  const layer = new Layer();
+  canvas.vesper = layer;
+  app.stage.addChild(layer);
+  await layer.draw();
+  layer.activate();
+
+  // Survol de la source 1 : pointer réel sur le canvas
+  if (params.get("hover")) {
+    const p = app.stage.toGlobal(new PIXI.Point(500, 700));
+    app.view.dispatchEvent(new PointerEvent("pointermove", { clientX: p.x, clientY: p.y, bubbles: true }));
+  }
+  // Quitter la case Vesper : logos masqués
+  const before = layer.markers.children.length;
+  const visibleOn = layer.markers.visible;
+  if (params.get("leave")) {
+    ui.controls.control = "tokens";
+    await Hooks.call("renderSceneControls");
+  }
+  app.render();
+  const fonts = [...document.fonts].map((f) => `${f.family}|${f.weight}|${f.status}`).filter((s) => /Awesome/.test(s));
+  window.__done = { ok: true, fonts, markers: before, visibleOn, visibleAfter: layer.markers.visible, field: layer.single.visible };
+</script>

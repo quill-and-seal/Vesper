@@ -41,7 +41,8 @@ La case **Vesper** (icône d'oreille, dans la barre de gauche) a ses propres out
 
 - **Palette** : choisis le son à poser (feu, rivière, grillons, un son de l'atelier ou un fichier audio), son rayon et son volume.
 - **Poser** : clique sur la scène pour poser le son choisi (Maj : au centre de la case). C'est un vrai son d'ambiance de Foundry, réglable comme les autres.
-- **Sélectionner** : survole la pastille d'une source pour voir **comment son son se répand**. Clic ou clic droit : ses réglages. Glisser : la déplacer, la carte suit en direct.
+- Dès que la case est ouverte, **chaque source apparaît avec un logo** : l'icône de son son, sa couleur et son nom (grisé si elle est cachée).
+- **Sélectionner** : survole le logo d'une source pour voir **comment son son se répand**. Clic ou clic droit : ses réglages. Glisser : la déplacer, la carte suit en direct.
 - **Tout afficher** : la carte de toutes les sources de la scène, pour repérer les zones silencieuses ou trop chargées.
 
 La carte montre exactement ce que Vesper joue, calculée avec le même moteur :
@@ -138,6 +139,7 @@ await vesper.savePatch("my-forge", { label: "Forge", layers: [/* … */] });
 
 - `npm test` : tests de la géométrie, de l'acoustique, des réverbérations et du calendrier des sons dispersés.
 - `node tools/render.mjs [dossier] [sons] [intensités] [secondes]` : rend les sons procéduraux en fichiers WAV (hors ligne, dans Chromium) et affiche leurs mesures. Pratique pour écouter un réglage.
+- `node tests/browser/shot.mjs "layer.html?hover=1" calque.png` : fait tourner le vrai calque de Vesper avec PIXI 7 (comme Foundry) et en prend une capture (`npm install` d'abord, pour PIXI et la police d'icônes).
 - `node tests/browser/run.mjs` : fait tourner le module entier dans Chromium (sans Foundry, avec un faux Foundry minimal) et **mesure le son produit** : baisse avec la distance, gauche/droite, murs et portes, réverbération, isolation, conditions des couches. Variables `PLAYWRIGHT` (chemin de playwright-core) et `CHROME` si besoin.
 
 ## Limites connues

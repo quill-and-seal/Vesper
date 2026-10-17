@@ -171,7 +171,7 @@ const scene = makeFlagged({
   name: "Test",
   grid: { units: "m" },
   environment: { darknessLevel: 0 },
-  sounds: [],
+  sounds: Object.assign([], { get(id) { return this.find((d) => d.id === id); } }),
   regions: []
 });
 

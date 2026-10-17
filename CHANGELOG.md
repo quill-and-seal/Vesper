@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Logos des sources : dès qu'on ouvre la case Vesper, chaque source apparaît sur la carte avec un badge à l'icône de son son (flamme, vagues, insecte, note de musique pour un fichier…), sa couleur et son nom. Taille constante quel que soit le zoom ; source cachée ou rendue à Foundry : grisée.
+
 ## 0.3.0
 
 - Outil « Poser » dans la case Vesper, avec une palette : sons procéduraux, sons de l'atelier ou fichier audio, rayon et volume par défaut.

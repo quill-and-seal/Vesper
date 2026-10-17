@@ -22,7 +22,7 @@ import { getPatch } from "./patches.js";
 
 export const LAYER_NAME = "vesper";
 
-const MARKER_PX = 11;
+const BADGE_PX = 18;
 const CLICK_TOLERANCE = 6;
 const COLOR_PATCH = 0xf2a23c;
 const COLOR_FILE = 0xe8e2d4;
@@ -63,6 +63,79 @@ export function soundDataFor(choice, point, distancePerCell) {
     walls: true,
     flags: { [MODULE_ID]: { sound: { patch } } }
   };
+}
+
+/** Codes des icônes Font Awesome utilisées par les sons (police chargée par Foundry). */
+const GLYPHS = {
+  "fa-fire": "\uf06d",
+  "fa-fire-flame-simple": "\uf46a",
+  "fa-wind": "\uf72e",
+  "fa-cloud-rain": "\uf73d",
+  "fa-water": "\uf773",
+  "fa-droplet": "\uf043",
+  "fa-bug": "\uf188",
+  "fa-wave-square": "\uf83e",
+  "fa-heart-pulse": "\uf21e",
+  "fa-sliders": "\uf1de",
+  "fa-music": "\uf001"
+};
+
+/** Couleur du badge selon le son. */
+const COLORS = {
+  fire: 0xf28c28,
+  torch: 0xf2b23c,
+  wind: 0xb8d4e3,
+  rain: 0x5fa8e8,
+  river: 0x3fb6c8,
+  drips: 0x7fc4f0,
+  crickets: 0x8fd16a,
+  drone: 0xb07ae8,
+  heartbeat: 0xe85a6a
+};
+
+/** Ce qu'affiche le logo d'un son : icône, couleur, nom. */
+export function markerInfo(doc) {
+  const id = soundPatch(doc);
+  if (id) {
+    const p = getPatch(id);
+    const cls = String(p?.icon ?? "").split(" ").find((c) => GLYPHS[c]) ?? "fa-sliders";
+    const label = doc.name || (p?.builtin ? game.i18n.localize(`VESPER.Synth.${id}`) : p?.label || id);
+    return { glyph: GLYPHS[cls], color: COLORS[id] ?? COLOR_PATCH, label };
+  }
+  const file = String(doc.path ?? "").split("/").pop() || "—";
+  let name = file.replace(/\.[a-z0-9]+$/i, "");
+  try {
+    name = decodeURIComponent(name);
+  } catch {
+    /* nom laissé tel quel */
+  }
+  return { glyph: GLYPHS["fa-music"], color: COLOR_FILE, label: doc.name || name };
+}
+
+/** Icône de secours dessinée (haut-parleur et ondes), si la police d'icônes n'est pas chargée. */
+function speakerIcon(r, color) {
+  const g = new PIXI.Graphics();
+  g.beginFill(color).drawPolygon([-r, -r * 0.35, -r * 0.45, -r * 0.35, r * 0.1, -r * 0.9, r * 0.1, r * 0.9, -r * 0.45, r * 0.35, -r, r * 0.35]).endFill();
+  g.lineStyle(r * 0.18, color, 1);
+  g.arc(r * 0.15, 0, r * 0.5, -0.8, 0.8);
+  g.moveTo(r * 0.15 + Math.cos(-0.8) * r * 0.9, Math.sin(-0.8) * r * 0.9).arc(r * 0.15, 0, r * 0.9, -0.8, 0.8);
+  return g;
+}
+
+/** Icône Font Awesome en texte PIXI, ou null si la police n'est pas disponible. */
+function iconGlyph(glyph, size, color) {
+  // La police doit être réellement chargée (Foundry l'utilise pour ses propres boutons)
+  const loaded = new Set();
+  try {
+    for (const f of document.fonts ?? []) if (f.status === "loaded") loaded.add(String(f.family).replace(/["']/g, ""));
+  } catch {
+    return null;
+  }
+  const family = ["Font Awesome 6 Pro", "Font Awesome 6 Free", "Font Awesome 5 Free"].find((f) => loaded.has(f));
+  if (!family) return null;
+  const t = new PIXI.Text(glyph, { fontFamily: family, fontWeight: "900", fontSize: Math.round(size), fill: color });
+  t.anchor.set(0.5);
+  return t;
 }
 
 export function createVesperLayerClass({ engine }) {
@@ -148,24 +221,45 @@ export function createVesperLayerClass({ engine }) {
     refreshMarkers() {
       if (!this.markers) return;
       for (const c of this.markers.removeChildren()) c.destroy({ children: true });
-      if (!game.user.isGM) return;
+      // Visibles dès que la case Vesper est ouverte, pour le MJ
+      this.markers.visible = this.#active();
+      if (!this.markers.visible) return;
       const zoom = this.#zoom();
-      const r = MARKER_PX / zoom;
-      for (const doc of canvas.scene?.sounds ?? []) {
-        const g = new PIXI.Graphics();
-        const color = doc.hidden || !doc.path ? COLOR_OFF : soundPatch(doc) ? COLOR_PATCH : COLOR_FILE;
-        const hovered = doc.id === this.#hover;
-        g.lineStyle(2 / zoom, 0x000000, 0.6).beginFill(color, hovered ? 1 : 0.85).drawCircle(0, 0, r).endFill();
-        // Ondes : deux petits arcs, pour reconnaître une source sonore
-        g.lineStyle(1.6 / zoom, 0x1b1b1b, 0.9);
-        g.arc(0, 0, r * 0.35, -0.7, 0.7);
-        g.moveTo(Math.cos(-0.7) * r * 0.62, Math.sin(-0.7) * r * 0.62).arc(0, 0, r * 0.62, -0.7, 0.7);
-        if (hovered) g.lineStyle(2 / zoom, 0xffffff, 0.9).drawCircle(0, 0, r * 1.35);
-        if (!isManaged(doc)) g.alpha = 0.5;
-        g.position.set(doc.x, doc.y);
-        g.soundId = doc.id;
-        this.markers.addChild(g);
-      }
+      for (const doc of canvas.scene?.sounds ?? []) this.markers.addChild(this.#marker(doc, zoom));
+    }
+
+    /** Logo d'une source : badge rond, icône du son, nom en dessous. Taille constante à l'écran. */
+    #marker(doc, zoom) {
+      const info = markerInfo(doc);
+      const hovered = doc.id === this.#hover;
+      const off = doc.hidden || !doc.path;
+      const m = new PIXI.Container();
+      m.soundId = doc.id;
+      m.position.set(doc.x, doc.y);
+      m.scale.set(1 / zoom);
+
+      const g = m.addChild(new PIXI.Graphics());
+      const ring = off ? COLOR_OFF : info.color;
+      if (hovered) g.beginFill(0xffffff, 0.25).drawCircle(0, 0, BADGE_PX + 7).endFill();
+      g.lineStyle(3, ring, 1).beginFill(0x15120e, 0.88).drawCircle(0, 0, BADGE_PX).endFill();
+
+      const icon = iconGlyph(info.glyph, BADGE_PX * 1.05, off ? COLOR_OFF : info.color);
+      if (icon) m.addChild(icon);
+      else m.addChild(speakerIcon(BADGE_PX * 0.55, off ? COLOR_OFF : info.color));
+
+      const label = new PIXI.Text(info.label, {
+        fontFamily: "Signika, sans-serif",
+        fontSize: 13,
+        fill: 0xffffff,
+        stroke: 0x000000,
+        strokeThickness: 3
+      });
+      label.anchor.set(0.5, 0);
+      label.position.set(0, BADGE_PX + 4);
+      m.addChild(label);
+
+      if (off || !isManaged(doc)) m.alpha = 0.6;
+      return m;
     }
 
     /* -------------------------------------------- */
@@ -304,7 +398,7 @@ export function createVesperLayerClass({ engine }) {
 
     /** Source sous la souris (sa pastille). */
     #hit(point) {
-      const grab = (MARKER_PX + 5) / this.#zoom();
+      const grab = (BADGE_PX + 6) / this.#zoom();
       let best = null;
       let bestD = Infinity;
       for (const doc of canvas.scene?.sounds ?? []) {

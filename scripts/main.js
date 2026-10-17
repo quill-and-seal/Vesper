@@ -230,6 +230,9 @@ function refreshLayer({ markers = true } = {}) {
 }
 
 // Zoom : les repères gardent la même taille à l'écran
+// Ouvrir ou quitter la case Vesper : les logos des sources apparaissent ou disparaissent
+Hooks.on("renderSceneControls", () => canvas.vesper?.refreshMarkers?.());
+
 let lastZoom = null;
 Hooks.on("canvasPan", (c, view) => {
   const zoom = view?.scale ?? canvas.stage?.scale?.x;

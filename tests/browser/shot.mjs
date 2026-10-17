@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT ?? "playwright-core");
 const [pageUrl, out] = process.argv.slice(2);
 const root = resolve(new URL("../..", import.meta.url).pathname);
-const types = { ".js": "text/javascript", ".html": "text/html", ".wav": "audio/wav", ".json": "application/json" };
+const types = { ".js": "text/javascript", ".mjs": "text/javascript", ".html": "text/html", ".css": "text/css", ".woff2": "font/woff2", ".ttf": "font/ttf", ".wav": "audio/wav", ".json": "application/json" };
 const server = createServer(async (req, res) => {
   try {
     const path = join(root, decodeURIComponent(new URL(req.url, "http://x").pathname));
