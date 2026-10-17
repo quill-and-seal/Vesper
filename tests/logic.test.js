@@ -160,3 +160,85 @@ test("sons dispersés : déterministes, dans les intervalles, sans doublon entre
   const mean = (20 * WINDOW_MS) / 1000 / count;
   assert.ok(mean > 6 && mean < 10, `intervalle moyen ${mean}`);
 });
+
+import { pval, nextInterval, eventAmp, normalizePatch, BUILTIN_PATCHES, BUILTIN_IDS, patchIntensity, modTargets, LIMITS, setCustomPatches, getPatch } from "../scripts/patches.js";
+
+test("procédural : valeurs liées à l'intensité", () => {
+  assert.equal(pval(5, 0.3), 5);
+  assert.equal(pval({ a: 4, b: 18 }, 0), 4);
+  assert.equal(pval({ a: 4, b: 18 }, 1), 18);
+  assert.equal(pval({ a: 4, b: 18 }, 0.5), 11);
+  assert.equal(pval({ a: 4, b: 18 }, 3), 18, "intensité bornée");
+});
+
+test("procédural : intervalles, métronome et hasard", () => {
+  assert.equal(nextInterval(2, 1, 0.123), 0.5);
+  // Moyenne du processus de Poisson ≈ 1/cadence
+  let sum = 0;
+  const n = 20000;
+  for (let k = 1; k <= n; k++) sum += nextInterval(4, 0, (k - 0.5) / n);
+  assert.ok(Math.abs(sum / n - 0.25) < 0.01);
+  assert.equal(eventAmp(0.1, 0.5, 2, 0), 0.1);
+  assert.equal(eventAmp(0.1, 0.5, 2, 1), 0.5);
+  assert.ok(eventAmp(0, 1, 3, 0.5) < 0.2, "contraste : la plupart des événements sont petits");
+});
+
+test("procédural : les modèles livrés sont valides et intacts après nettoyage", () => {
+  for (const id of BUILTIN_IDS) {
+    const raw = BUILTIN_PATCHES[id];
+    const p = normalizePatch(raw, id);
+    assert.ok(p.layers.length > 0, id);
+    assert.equal(p.layers.length, raw.layers.length, `${id} garde ses couches`);
+    p.layers.forEach((l, i) => {
+      assert.equal(l.mods.length, raw.layers[i].mods?.length ?? 0, `${id}/${l.id} garde ses modulations`);
+      for (const m of l.mods) assert.ok(modTargets(l).includes(m.target));
+      if (l.source.type === "events") assert.ok(pval(l.source.rate, 1) <= LIMITS.eventRate);
+    });
+    // Le nettoyage est stable
+    assert.deepEqual(normalizePatch(p, id), p);
+  }
+});
+
+test("procédural : une recette malveillante est bornée", () => {
+  const p = normalizePatch({
+    volume: 999,
+    layers: Array.from({ length: 50 }, () => ({
+      source: { type: "events", rate: 1e6, burstMax: 1e4, decay: -5 },
+      filters: Array.from({ length: 20 }, () => ({ type: "evil", freq: 1e9 })),
+      mods: [{ target: "filters.99.freq" }, { target: "gain", rate: 1e5, depth: 9 }],
+      gain: "abc"
+    }))
+  });
+  assert.equal(p.volume, 12);
+  assert.equal(p.layers.length, LIMITS.layers);
+  const l = p.layers[0];
+  assert.equal(l.source.rate, LIMITS.eventRate);
+  assert.equal(l.source.burstMax, LIMITS.burstMax);
+  assert.equal(l.source.decay, 0.1);
+  assert.equal(l.filters.length, LIMITS.filters);
+  assert.equal(l.filters[0].type, "lowpass");
+  assert.equal(l.filters[0].freq, 20000);
+  assert.deepEqual(l.mods.map((m) => m.target), ["gain"]);
+  assert.equal(l.mods[0].depth, 1);
+  assert.equal(l.gain, 0.5);
+});
+
+test("procédural : intensité selon le vent, la pluie, la tension", () => {
+  const fire = normalizePatch(BUILTIN_PATCHES.fire);
+  assert.equal(patchIntensity(fire, { wind: 0.8 }), 0.8);
+  assert.ok(Math.abs(patchIntensity(fire, { wind: 0, tension: 0 }) - fire.fixed) < 1e-9);
+  assert.equal(patchIntensity(fire, { wind: 0.8 }, 0.1), 0.1, "réglage du son prioritaire");
+  const rain = normalizePatch(BUILTIN_PATCHES.rain);
+  assert.equal(patchIntensity(rain, { weather: "storm", weatherIntensity: 0.9 }), 0.9);
+  assert.equal(patchIntensity(rain, { weather: "clear" }), rain.fixed);
+  assert.equal(patchIntensity(normalizePatch(BUILTIN_PATCHES.heartbeat), { tension: 3 }), 1);
+});
+
+test("procédural : bibliothèque, les sons du MJ ne remplacent pas les modèles", () => {
+  setCustomPatches({ "my-a": { label: "A", layers: [{ source: { type: "noise" } }] }, fire: { label: "pirate" } });
+  assert.equal(getPatch("my-a").label, "A");
+  assert.equal(getPatch("my-a").builtin, false);
+  assert.equal(getPatch("fire").builtin, true);
+  setCustomPatches({});
+  assert.equal(getPatch("my-a"), null);
+});

@@ -10,6 +10,7 @@
   try {
     await import("/scripts/main.js");
     await Hooks.call("init");
+    await Hooks.call("setup");
     await Hooks.call("ready");
     await T.ctx.resume();
     await Hooks.call("canvasReady");
@@ -183,6 +184,91 @@
     // J. Son ponctuel
     const shot = await api.playAt("/tests/browser/click.wav", { x: 100, y: 0 }, { radius: 20 });
     log("playAt", { played: !!shot, emitted: (T.emitted ?? []).length });
+
+    // L. Sons procéduraux posés sur la carte
+    await api.setSoundscape({ layers: [] });
+    await settle();
+    const fire = T.makeSound("fire", 150, 0, { path: "modules/vesper-audio/synth/procedural.wav", flags: { "vesper-audio": { sound: { patch: "fire" } } } });
+    spatial.refreshSounds();
+    await sleep(1200);
+    const fireHeard = await dry(1500);
+    const fireVoice = spatial.describe().voices.find((v) => v.id === "fire");
+    // Mur entre le token et le feu : plus faible et plus sourd
+    T.wall(75, -2000, 75, 2000);
+    spatial.refreshWalls();
+    await sleep(900);
+    const fireWalled = await dry(1500);
+    canvas.walls.placeables.length = 0;
+    spatial.refreshWalls();
+    T.scene.sounds.length = 0;
+    spatial.refreshSounds();
+    // Désigné par son chemin (synth/drips.wav), sans réglage
+    T.makeSound("drips", -100, 0, { path: "modules/vesper-audio/synth/drips.wav" });
+    spatial.refreshSounds();
+    await sleep(600);
+    const dripsVoice = spatial.describe().voices.find((v) => v.id === "drips");
+    T.scene.sounds.length = 0;
+    spatial.refreshSounds();
+    log("procedural", { fireHeard, fireWalled, fireVoice: !!fireVoice, dripsVoice: !!dripsVoice });
+
+    // M. Atelier : son du MJ, utilisé par un son posé, puis modifié (le son posé se relance)
+    await api.savePatch("my-buzz", { label: "Bourdon", layers: [{ source: { type: "osc", wave: "sawtooth", freq: 110 }, filters: [{ type: "lowpass", freq: 800 }], gain: 0.3 }] });
+    const buzzDoc = T.makeSound("buzz", 100, 0, { path: "modules/vesper-audio/synth/procedural.wav", flags: { "vesper-audio": { sound: { patch: "my-buzz" } } } });
+    spatial.refreshSounds();
+    await sleep(800);
+    const firstVoice = spatial.entries.get("buzz")?.voice;
+    const buzzA = await dry(600);
+    await api.savePatch("my-buzz", { label: "Bourdon", layers: [{ source: { type: "osc", wave: "sawtooth", freq: 110 }, filters: [{ type: "lowpass", freq: 800 }], gain: 0.05 }] });
+    await sleep(1200);
+    const secondVoice = spatial.entries.get("buzz")?.voice;
+    const buzzB = await dry(600);
+    T.scene.sounds.length = 0;
+    spatial.refreshSounds();
+    // Couche générée du paysage sonore avec un son de l'atelier
+    await api.setSoundscape({ layers: [{ id: "custom", kind: "synth", synth: "my-buzz", volume: 0 }] });
+    await sleep(1500);
+    const customBed = await bed(600);
+    await api.setSoundscape({ layers: [] });
+    // Fenêtre de l'atelier : modèle verrouillé, puis duplication
+    const ws = await api.openWorkshop("fire");
+    const lockedInputs = ws.element.querySelectorAll("input[disabled], select[disabled]").length;
+    const layersShown = ws.element.querySelectorAll(".vw-layer").length;
+    // Dupliquer le feu, puis modifier sa cadence de crépitements dans le formulaire
+    const click = async (sel) => {
+      ws.element.querySelector(sel).click();
+      await ws.lastAction;
+      await sleep(50);
+      await ws.render();
+    };
+    await click('[data-action="duplicate"]');
+    const dupId = ws.patchId;
+    const dupEditable = ws.element.querySelectorAll("input[disabled]").length === 0;
+    const rateA = ws.element.querySelector('[name="layers.2.source.rate.a"]');
+    rateA.value = "2";
+    rateA.dispatchEvent(new Event("change", { bubbles: true }));
+    await ws.lastSubmit;
+    await sleep(400);
+    const savedRate = game.settings.get("vesper-audio", "patches")[dupId]?.layers?.[2]?.source?.rate;
+    // Ajouter une couche d'événements, un filtre et une modulation, puis délier une valeur
+    await ws.render();
+    await click('[data-action="addLayer"][data-type="events"]');
+    const nLayers = game.settings.get("vesper-audio", "patches")[dupId].layers.length;
+    await click('[data-action="addFilter"][data-index="4"]');
+    await click('[data-action="addMod"][data-index="4"]');
+    await click('[data-action="link"][data-path="layers.4.source.rate"]');
+    const last = game.settings.get("vesper-audio", "patches")[dupId].layers[4];
+    // Écoute dans l'atelier
+    await click('[data-action="play"]');
+    const playing = !!ws.player;
+    const preview = await probe(out.master)(800);
+    await click('[data-action="play"]');
+    const workshopEdit = { dupId, dupEditable, savedRate, nLayers, last: { filters: last.filters.length, mods: last.mods.length, rate: last.source.rate }, playing, preview };
+    ws.close();
+
+    log("workshop", { workshopEdit,
+      buzzA, buzzB, restarted: firstVoice !== secondVoice, customBed,
+      lockedInputs, layersShown, mine: Object.keys(game.settings.get("vesper-audio", "patches"))
+    });
 
     // I. Fenêtre du paysage sonore
     await api.setSoundscape({ layers: [{ id: "a", kind: "loop", paths: ["x.ogg"], label: "Foule" }, { id: "b", kind: "scatter", paths: [] }, { id: "c", kind: "synth", synth: "wind" }] });

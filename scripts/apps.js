@@ -6,7 +6,9 @@
 
 import { MODULE_ID, FLAG_ACOUSTICS, FLAG_SOUND, SOUND_DEFAULTS, LAYER_DEFAULTS, t, esc } from "./constants.js";
 import { REVERB_PRESETS } from "./audio/reverb-presets.js";
-import { SYNTH_TYPES } from "./audio/synth.js";
+import { PROCEDURAL_PATH, isProceduralPath } from "./audio/synth.js";
+import { getPatch } from "./patches.js";
+import { patchOptions } from "./workshop.js";
 import { readSoundscape, writeSoundscape } from "./soundscape.js";
 import { readSceneAcoustics, emberActive } from "./world.js";
 import { soundSettings } from "./spatial-engine.js";
@@ -29,7 +31,7 @@ export const TEMPLATES = {
   forest: () => [
     { label: t("Template.Layer.Wind"), kind: "synth", synth: "wind", volume: -20 },
     { label: t("Template.Layer.Birds"), kind: "scatter", volume: -14, when: { time: "day" }, scatter: { min: 4, max: 14 } },
-    { label: t("Template.Layer.NightCritters"), kind: "scatter", volume: -16, when: { time: "night" }, scatter: { min: 6, max: 20 } },
+    { label: t("Template.Layer.NightCritters"), kind: "synth", synth: "crickets", volume: -14, when: { time: "night" } },
     { label: t("Template.Layer.Dread"), kind: "synth", synth: "drone", volume: -22, outdoor: false, when: { tensionMin: 2 } }
   ],
   storm: () => [
@@ -42,9 +44,14 @@ export const TEMPLATES = {
     { label: t("Template.Layer.Mugs"), kind: "scatter", volume: -16, outdoor: false, when: { place: "inside" }, scatter: { min: 3, max: 10, distance: 0.3 } },
     { label: t("Template.Layer.Rain"), kind: "synth", synth: "rain", volume: -12, when: { weather: "rain" } }
   ],
+  camp: () => [
+    { label: t("Template.Layer.Fire"), kind: "synth", synth: "fire", volume: -8 },
+    { label: t("Template.Layer.NightCritters"), kind: "synth", synth: "crickets", volume: -16, when: { time: "night" } },
+    { label: t("Template.Layer.Wind"), kind: "synth", synth: "wind", volume: -22 }
+  ],
   dungeon: () => [
     { label: t("Template.Layer.Dread"), kind: "synth", synth: "drone", volume: -24, outdoor: false },
-    { label: t("Template.Layer.Drips"), kind: "scatter", volume: -18, outdoor: false, scatter: { min: 2, max: 9, distance: 0.5 } },
+    { label: t("Template.Layer.Drips"), kind: "synth", synth: "drips", volume: -12, outdoor: false },
     { label: t("Template.Layer.Distant"), kind: "scatter", volume: -16, outdoor: false, when: { tensionMin: 1 }, scatter: { min: 15, max: 40, distance: 0.9 } },
     { label: t("Template.Layer.Heart"), kind: "synth", synth: "heartbeat", volume: -14, outdoor: false, when: { tensionMin: 2 } }
   ]
@@ -187,8 +194,8 @@ export class SoundscapeConfig extends ApplicationV2 {
 
     const files =
       l.kind === "synth"
-        ? `<div class="form-group"><label>${t("Layer.Synth")}</label><select name="${p}.synth">${options(SYNTH_TYPES, l.synth, "Synth")}</select></div>
-           <p class="notes">${t(`Synth.${l.synth}Hint`)}</p>`
+        ? `<div class="form-group"><label>${t("Layer.Synth")}</label><select name="${p}.synth">${patchOptions(l.synth)}</select></div>
+           <p class="notes">${getPatch(l.synth)?.builtin ? t(`Synth.${l.synth}Hint`) : t("Synth.customHint")}</p>`
         : `<div class="form-group stacked">
              <label>${t(l.kind === "scatter" ? "Layer.FilesScatter" : "Layer.FilesLoop")}
                <button type="button" class="vesper-mini" data-action="pickFile" data-index="${i}"><i class="fa-solid fa-file-audio"></i> ${t("Layer.AddFile")}</button></label>
@@ -363,6 +370,19 @@ export function injectAmbientSoundConfig(app, html) {
   fs.innerHTML = `
     <legend><i class="fa-solid fa-ear-listen"></i> Vesper</legend>
     <div class="form-group">
+      <label>${t("SoundConfig.Patch")}</label>
+      <select name="${base}.patch" class="vesper-patch-pick">
+        <option value="">${esc(t("SoundConfig.PatchNone"))}</option>
+        ${patchOptions(s.patch ?? "")}
+      </select>
+      <p class="hint">${t("SoundConfig.PatchHint")}</p>
+    </div>
+    <div class="form-group vesper-patch-only">
+      <label>${t("SoundConfig.Intensity")}</label>
+      <input type="number" name="${base}.intensity" value="${Number.isFinite(s.intensity) ? s.intensity : ""}" min="0" max="1" step="0.05" placeholder="${esc(t("SoundConfig.IntensityAuto"))}">
+      <p class="hint">${t("SoundConfig.IntensityHint")}</p>
+    </div>
+    <div class="form-group">
       <label>${t("SoundConfig.Managed")}</label>
       <input type="checkbox" name="${base}.managed" ${s.managed !== false ? "checked" : ""}>
       <p class="hint">${t("SoundConfig.ManagedHint")}</p>
@@ -380,5 +400,21 @@ export function injectAmbientSoundConfig(app, html) {
   const anchor = root.querySelector("footer.form-footer, .form-footer, footer");
   if (anchor) anchor.before(fs);
   else (root.querySelector("form") ?? root).append(fs);
+
+  // Choisir un son procédural remplit le fichier du son (Foundry en exige un ; celui-ci est muet)
+  const pick = fs.querySelector(".vesper-patch-pick");
+  const pathInput = root.querySelector('[name="path"]');
+  const onlyPatch = fs.querySelector(".vesper-patch-only");
+  const sync = () => (onlyPatch.hidden = !pick.value);
+  pick.addEventListener("change", () => {
+    if (pathInput) {
+      if (pick.value) pathInput.value = PROCEDURAL_PATH;
+      else if (isProceduralPath(pathInput.value)) pathInput.value = "";
+      pathInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    sync();
+    app.setPosition?.({ height: "auto" });
+  });
+  sync();
   app.setPosition?.({ height: "auto" });
 }

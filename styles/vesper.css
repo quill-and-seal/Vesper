@@ -234,3 +234,202 @@
 .vesper .vesper-foot select {
   flex: 1.3;
 }
+
+/* -------------------------------------------- */
+/*  Atelier sonore                              */
+/* -------------------------------------------- */
+
+.vesper-workshop .vw-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vesper-workshop .vw-bar {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.vesper-workshop .vw-bar select {
+  flex: 1;
+}
+
+.vesper-workshop .vw-bar button {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
+}
+
+.vesper-workshop .vw-play.active {
+  outline: 2px solid var(--vesper-accent);
+}
+
+.vesper-workshop .vw-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9em;
+}
+
+.vesper-workshop .vw-preview input {
+  flex: 1;
+}
+
+.vesper-workshop .vw-preview output {
+  min-width: 3.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vesper-workshop .vw-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: var(--vesper-accent-soft);
+  font-size: 0.9em;
+}
+
+.vesper-workshop .vw-banner button {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.vesper-workshop .vw-layers {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.25rem;
+}
+
+.vesper-workshop .vw-layer {
+  border-radius: 6px;
+  border-left: 3px solid var(--vesper-accent);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.vesper-workshop .vw-layer.is-muted {
+  opacity: 0.55;
+  border-left-color: transparent;
+}
+
+.vesper-workshop .vw-layer legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.vesper-workshop .vw-layer legend input[type="text"] {
+  flex: 1;
+}
+
+.vesper-workshop .vw-mute {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+}
+
+.vesper-workshop .vw-tools {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.vesper-workshop .vw-tools a.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.vesper-workshop .vw-subtitle {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  margin-top: 0.2rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.vesper-workshop .vw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.3rem 0.6rem;
+}
+
+.vesper-workshop .vw-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.6rem;
+  align-items: end;
+}
+
+.vesper-workshop .vw-row .vw-field {
+  flex: 1 1 130px;
+}
+
+.vesper-workshop .vw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.88em;
+}
+
+.vesper-workshop .vw-field small {
+  opacity: 0.6;
+}
+
+.vesper-workshop .vw-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.vesper-workshop .vw-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+
+.vesper-workshop .vw-arrow {
+  opacity: 0.6;
+  font-size: 0.8em;
+}
+
+.vesper-workshop .vw-link {
+  opacity: 0.35;
+  flex: 0 0 auto;
+}
+
+.vesper-workshop .vw-link.active {
+  opacity: 1;
+  color: var(--vesper-accent);
+}
+
+.vesper-workshop .vw-field.is-pair .vw-inputs input {
+  border-color: var(--vesper-accent);
+}
+
+.vesper-workshop .vw-del {
+  flex: 0 0 auto;
+  padding-bottom: 0.3rem;
+}
+
+.vesper-workshop .vw-foot {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.vesper-workshop .vw-foot button {
+  flex: 1;
+  white-space: nowrap;
+}

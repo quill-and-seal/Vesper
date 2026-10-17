@@ -1,0 +1,68 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vesper — rendu des modèles</title>
+<script type="module">
+  import { PatchPlayer } from "/scripts/audio/patch-player.js";
+  import { getPatch, BUILTIN_IDS } from "/scripts/patches.js";
+
+  const params = new URLSearchParams(location.search);
+  const seconds = Number(params.get("s") ?? 12);
+  const ids = (params.get("ids") ?? BUILTIN_IDS.join(",")).split(",");
+  const intensities = (params.get("i") ?? "").split(",").filter(Boolean).map(Number);
+
+  function wav(buffer) {
+    const ch = buffer.numberOfChannels, len = buffer.length, sr = buffer.sampleRate;
+    const data = new DataView(new ArrayBuffer(44 + len * ch * 2));
+    const str = (o, s) => [...s].forEach((c, i) => data.setUint8(o + i, c.charCodeAt(0)));
+    str(0, "RIFF"); data.setUint32(4, 36 + len * ch * 2, true); str(8, "WAVEfmt ");
+    data.setUint32(16, 16, true); data.setUint16(20, 1, true); data.setUint16(22, ch, true);
+    data.setUint32(24, sr, true); data.setUint32(28, sr * ch * 2, true); data.setUint16(32, ch * 2, true);
+    data.setUint16(34, 16, true); str(36, "data"); data.setUint32(40, len * ch * 2, true);
+    const chans = [...Array(ch)].map((_, c) => buffer.getChannelData(c));
+    let o = 44;
+    for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++, o += 2) data.setInt16(o, Math.max(-1, Math.min(1, chans[c][i])) * 32767, true);
+    return new Uint8Array(data.buffer);
+  }
+
+  function stats(buffer) {
+    const d = buffer.getChannelData(0);
+    let sum = 0, peak = 0;
+    for (const v of d) { sum += v * v; peak = Math.max(peak, Math.abs(v)); }
+    // Variation du volume par tranches de 50 ms (un feu vivant varie, un souffle plat non)
+    const win = Math.round(buffer.sampleRate * 0.05);
+    const frames = [];
+    for (let s = 0; s + win < d.length; s += win) {
+      let e = 0; for (let i = s; i < s + win; i++) e += d[i] * d[i];
+      frames.push(10 * Math.log10(e / win + 1e-12));
+    }
+    frames.sort((a, b) => a - b);
+    const p = (q) => frames[Math.floor(q * (frames.length - 1))];
+    // Transitoires : échantillons qui dépassent 4× la moyenne locale
+    let transients = 0, last = -1e9;
+    const rmsAll = Math.sqrt(sum / d.length);
+    for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > rmsAll * 4 && i - last > buffer.sampleRate * 0.01) { transients++; last = i; }
+    return { rmsDb: +(10 * Math.log10(sum / d.length + 1e-12)).toFixed(1), peak: +peak.toFixed(2), spreadDb: +(p(0.95) - p(0.05)).toFixed(1), transientsPerSec: +(transients / (d.length / buffer.sampleRate)).toFixed(1), finite: d.every(Number.isFinite) };
+  }
+
+  const out = {};
+  try {
+    for (const id of ids) {
+      for (const i of intensities.length ? intensities : [null]) {
+        const ctx = new OfflineAudioContext(2, 48000 * seconds, 48000);
+        const patch = getPatch(id);
+        const player = new PatchPlayer(ctx, patch, { timers: false });
+        if (i !== null) player.setIntensity(i);
+        player.output.connect(ctx.destination);
+        // Programmation par tranches, comme en direct (l'intensité est stable ici)
+        for (let t = 0; t < seconds; t += 0.4) player.schedule(t + 0.4);
+        const buffer = await ctx.startRendering();
+        const key = i === null ? id : `${id}@${i}`;
+        const bytes = wav(buffer); let bin = ""; for (let k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode(...bytes.subarray(k, k + 0x8000));
+        out[key] = { stats: stats(buffer), wav: btoa(bin) };
+      }
+    }
+    window.__done = { ok: true, out };
+  } catch (e) {
+    window.__done = { ok: false, error: String(e.stack ?? e) };
+  }
+</script>

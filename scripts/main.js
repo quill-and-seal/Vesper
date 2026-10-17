@@ -12,6 +12,8 @@ import { registerAmbientSoundClass } from "./ambient-sound.js";
 import { SoundscapeConfig, openApps, injectAmbientSoundConfig, TEMPLATES } from "./apps.js";
 import { REVERB_PRESETS } from "./audio/reverb-presets.js";
 import { SYNTH_TYPES } from "./audio/synth.js";
+import { setCustomPatches, getPatch, allPatches, customPatches, normalizePatch } from "./patches.js";
+import { Workshop } from "./workshop.js";
 
 const out = new AudioOutput();
 const spatial = new SpatialEngine(out);
@@ -72,6 +74,20 @@ Hooks.once("init", () => {
   client("reverbVolume", Number, 1, { range: { min: 0, max: 2, step: 0.05 }, onChange: () => out.updateVolume() });
   client("soundscape", Boolean, true, { onChange: () => soundscape.update() });
 
+  // Sons créés dans l'atelier : partagés avec tous les joueurs
+  game.settings.register(MODULE_ID, "patches", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+    onChange: (value) => {
+      setCustomPatches(value);
+      soundscape.sync();
+      for (const app of openApps) app.onSceneChanged?.();
+      for (const app of Workshop.open) app.onPatchesChanged();
+    }
+  });
+
   registerRegionBehavior();
   registerAmbientSoundClass();
 
@@ -89,6 +105,18 @@ Hooks.once("init", () => {
     getTension: (scene) => readSoundscape(scene).tension,
     setTension: (level, scene) => writeSoundscape({ tension: Math.max(0, Math.min(3, Number(level) || 0)) }, scene),
     openSoundscape: () => new SoundscapeConfig(engine).render({ force: true }),
+    openWorkshop: (patchId) => new Workshop(engine, { patchId }).render({ force: true }),
+    /** Sons procéduraux : modèles livrés et sons de l'atelier. */
+    getPatch,
+    allPatches,
+    /** Ajoute ou remplace un son de l'atelier (MJ). */
+    savePatch: async (id, patch) => {
+      const map = Object.fromEntries(Object.entries(customPatches()).map(([k, p]) => [k, JSON.parse(JSON.stringify({ ...p, builtin: undefined, icon: undefined, id: undefined }))]));
+      const clean = normalizePatch(patch, id);
+      delete clean.id;
+      map[id] = clean;
+      await game.settings.set(MODULE_ID, "patches", map);
+    },
     describe: () => ({ ...spatial.describe(), soundscape: soundscape.describe() })
   };
 });
@@ -102,6 +130,15 @@ async function playAt(src, origin, { emit = true, ...options } = {}) {
   return spatial.playAt(src, origin, options);
 }
 
+// Les réglages du monde sont lus : on charge les sons de l'atelier
+Hooks.once("setup", () => {
+  try {
+    setCustomPatches(game.settings.get(MODULE_ID, "patches"));
+  } catch {
+    setCustomPatches({});
+  }
+});
+
 Hooks.once("ready", () => {
   game.socket.on(SOCKET, (msg) => {
     if (msg?.action === "playAt") spatial.playAt(msg.src, msg.origin, msg.options ?? {});
@@ -114,18 +151,30 @@ Hooks.once("ready", () => {
 
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!game.user.isGM) return;
-  const tool = {
-    name: "vesper-soundscape",
-    title: "VESPER.Controls.Soundscape",
-    icon: "fa-solid fa-ear-listen",
-    button: true,
-    order: 50,
-    onChange: () => new SoundscapeConfig(engine).render({ force: true })
-  };
+  const tools = [
+    {
+      name: "vesper-soundscape",
+      title: "VESPER.Controls.Soundscape",
+      icon: "fa-solid fa-ear-listen",
+      button: true,
+      order: 50,
+      onChange: () => new SoundscapeConfig(engine).render({ force: true })
+    },
+    {
+      name: "vesper-workshop",
+      title: "VESPER.Controls.Workshop",
+      icon: "fa-solid fa-flask",
+      button: true,
+      order: 51,
+      onChange: () => new Workshop(engine).render({ force: true })
+    }
+  ];
   const sounds = Array.isArray(controls) ? controls.find((c) => c.name === "sounds") : controls.sounds;
   if (!sounds) return;
-  if (Array.isArray(sounds.tools)) sounds.tools.push(tool);
-  else sounds.tools[tool.name] = tool;
+  for (const tool of tools) {
+    if (Array.isArray(sounds.tools)) sounds.tools.push(tool);
+    else sounds.tools[tool.name] = tool;
+  }
 });
 
 /* -------------------------------------------- */

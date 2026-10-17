@@ -40,6 +40,14 @@ globalThis.foundry = {
     randomID: (n = 16) => Math.random().toString(36).slice(2, 2 + n).padEnd(n, "x"),
     deepClone: (o) => structuredClone(o),
     hasProperty: (o, p) => getPath(o, p) !== undefined,
+    getProperty: (o, p) => getPath(o, p),
+    setProperty: (o, p, v) => {
+      const parts = p.split(".");
+      let x = o;
+      parts.slice(0, -1).forEach((k) => (x = x[k] ??= {}));
+      x[parts.at(-1)] = v;
+      return true;
+    },
     expandObject: (flat) => {
       const out = {};
       for (const [k, v] of Object.entries(flat)) {
@@ -67,6 +75,27 @@ globalThis.foundry = {
             this.element = document.createElement("form");
             this.element.innerHTML = `<section class="window-content"></section>`;
             document.body.append(this.element);
+            const opts = this.constructor.DEFAULT_OPTIONS ?? {};
+            // Comme ApplicationV2 : boutons data-action et soumission du formulaire à chaque changement
+            this.element.addEventListener("click", (ev) => {
+              const target = ev.target.closest("[data-action]");
+              const fn = target && opts.actions?.[target.dataset.action];
+              if (fn) {
+                ev.preventDefault();
+                this.lastAction = fn.call(this, ev, target);
+              }
+            });
+            this.element.addEventListener("change", (ev) => {
+              if (!opts.form?.submitOnChange) return;
+              const object = {};
+              for (const el of this.element.querySelectorAll("[name]")) {
+                if (el.disabled) continue;
+                if (el.type === "checkbox") object[el.name] = el.checked;
+                else if (el.type === "number" || el.type === "range") object[el.name] = el.value === "" ? null : Number(el.value);
+                else object[el.name] = el.value;
+              }
+              this.lastSubmit = opts.form.handler.call(this, ev, this.element, { object });
+            });
             this._onFirstRender?.({}, {});
           }
           const content = this.element.querySelector(".window-content");

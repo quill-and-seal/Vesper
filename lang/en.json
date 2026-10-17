@@ -104,7 +104,8 @@
       }
     },
     "Controls": {
-      "Soundscape": "Soundscape (Vesper)"
+      "Soundscape": "Soundscape (Vesper)",
+      "Workshop": "Sound workshop (Vesper)"
     },
     "Soundscape": {
       "Title": "Soundscape — {scene}",
@@ -161,7 +162,18 @@
       "windHint": "Follows Ember's wind strength if active, otherwise blows softly and grows with tension.",
       "rainHint": "Follows Ember's rain intensity if active.",
       "droneHint": "Low and slow, more and more dissonant with tension.",
-      "heartbeatHint": "Speeds up with tension (58 to 120 beats per minute)."
+      "heartbeatHint": "Speeds up with tension (58 to 120 beats per minute).",
+      "fire": "Campfire",
+      "torch": "Torch",
+      "river": "River",
+      "drips": "Drips (cave)",
+      "crickets": "Crickets",
+      "fireHint": "Flickering roar, crackles and popping logs. Flares up with Ember's wind.",
+      "torchHint": "Nervous flame and sputtering. Stirs with Ember's wind.",
+      "riverHint": "Current, babbling and bubbles.",
+      "dripsHint": "Sparse ringing drips, best with the « Cave » acoustics.",
+      "cricketsHint": "Two nearby crickets and a distant chorus.",
+      "customHint": "Sound made in the sound workshop."
     },
     "When": {
       "Title": "Plays when",
@@ -215,8 +227,10 @@
         "Mugs": "Mugs, laughter",
         "Drips": "Drips",
         "Distant": "Distant noises",
-        "Heart": "Heart"
-      }
+        "Heart": "Heart",
+        "Fire": "Campfire"
+      },
+      "camp": "Camp"
     },
     "SoundConfig": {
       "Managed": "Managed by Vesper",
@@ -224,13 +238,136 @@
       "Directional": "Directional sound",
       "DirectionalHint": "The sound comes from one side. Unchecked: a bed with no direction (rain over the whole area).",
       "Size": "Source size (squares)",
-      "SizeHint": "A river, a crowd, a waterfall are large: they fade more slowly and sound wider."
+      "SizeHint": "A river, a crowd, a waterfall are large: they fade more slowly and sound wider.",
+      "Patch": "Procedural sound",
+      "PatchNone": "None (the sound's file)",
+      "PatchHint": "A sound computed live instead of the file: fire, river, crickets, or a workshop sound. Walls, distance and reverb apply as for a file.",
+      "Intensity": "Intensity",
+      "IntensityAuto": "auto",
+      "IntensityHint": "Empty: follows wind, rain or tension depending on the sound. 0 to 1 to fix it (a small fire, a roaring blaze)."
     },
     "Error": {
       "GMOnly": "Only the GM can change the soundscape."
     },
     "Log": {
       "NoEmber": "Ember is not active: layer weather conditions assume clear weather."
+    },
+    "Workshop": {
+      "Title": "Sound workshop",
+      "Builtins": "Models",
+      "Mine": "My sounds",
+      "Play": "Listen",
+      "Stop": "Stop",
+      "New": "New sound",
+      "Duplicate": "Duplicate",
+      "Delete": "Delete",
+      "DeleteConfirm": "Delete « {name} »? Map sounds and layers using it will go silent.",
+      "NewName": "New sound",
+      "CopyName": "{name} (copy)",
+      "BuiltinNote": "Model shipped with Vesper: listen to it, then duplicate it to edit.",
+      "PreviewIntensity": "Listening intensity",
+      "Name": "Name",
+      "IntensitySource": "Intensity follows",
+      "Fixed": "Fixed intensity",
+      "FixedHint": "Used when intensity follows nothing, or when there is no wind or rain.",
+      "Volume": "Volume",
+      "UseHint": "To use it: in the soundscape (generated layer), or on a placed sound (« Procedural sound » in its sheet).",
+      "Empty": "No layers. Add noise, an oscillator or events.",
+      "Link": "Follow intensity (one value when calm, one at maximum)",
+      "Unlink": "Fixed value",
+      "PairHint": "Calm → maximum",
+      "Mute": "Mute this layer",
+      "RemoveLayer": "Remove layer",
+      "Source": {
+        "noise": "Noise",
+        "osc": "Oscillator",
+        "events": "Events"
+      },
+      "Color": "Color",
+      "Colors": {
+        "white": "White (hiss)",
+        "pink": "Pink (water, rain)",
+        "brown": "Brown (rumble)"
+      },
+      "Wave": "Shape",
+      "Waves": {
+        "sine": "Sine",
+        "triangle": "Triangle",
+        "square": "Square",
+        "sawtooth": "Sawtooth"
+      },
+      "Freq": "Frequency",
+      "Boost": "Gain",
+      "Output": "Output",
+      "Gain": "Volume",
+      "Pan": "Stereo position",
+      "FiltersTitle": "Filters",
+      "NoFilter": "No filter.",
+      "FilterType": "Filter",
+      "Filters": {
+        "lowpass": "Low-pass",
+        "highpass": "High-pass",
+        "bandpass": "Band-pass",
+        "peaking": "Peak",
+        "notch": "Notch"
+      },
+      "ModsTitle": "Modulations",
+      "NoMod": "No modulation.",
+      "ModTarget": "Parameter",
+      "ModKind": "Motion",
+      "ModRate": "Speed",
+      "ModDepth": "Depth",
+      "Mods": {
+        "lfo": "Oscillates",
+        "jitter": "Wavers randomly"
+      },
+      "Rhythm": "Rhythm",
+      "Grain": "Grain",
+      "Grains": {
+        "noise": "Burst (noise)",
+        "tone": "Short tone"
+      },
+      "Ev": {
+        "rate": "Rate",
+        "rateHint": "Average events per second.",
+        "regularity": "Regularity",
+        "regularityHint": "0: random (crackles). 1: metronome (heartbeat).",
+        "burstChance": "Bursts",
+        "burstChanceHint": "Chance that an event is a burst (a sap pocket, a cricket chirp).",
+        "burstMin": "Burst min",
+        "burstMinHint": "Minimum events in a burst.",
+        "burstMax": "Burst max",
+        "burstMaxHint": "Maximum events in a burst.",
+        "burstGap": "Gap",
+        "burstGapHint": "Time between events of a burst.",
+        "grain": "Type",
+        "decay": "Length",
+        "decayHint": "Decay time of an event: 1 ms is a dry click, 60 ms a heartbeat.",
+        "freqMin": "Pitch min",
+        "freqMinHint": "Lowest frequency (picked at random between min and max).",
+        "freqMax": "Pitch max",
+        "freqMaxHint": "Highest frequency.",
+        "q": "Sharpness",
+        "qHint": "Burst band width: low = wide and dull, high = narrow and whistling.",
+        "ring": "Resonance",
+        "ringHint": "Adds a tone to the burst (the « tick » of splitting wood).",
+        "drop": "Glide",
+        "dropHint": "Pitch glides during the tone: < 1 goes down (heartbeat), > 1 goes up (drip, bubble).",
+        "ampMin": "Volume min",
+        "ampMinHint": "Volume of the smallest events.",
+        "ampMax": "Volume max",
+        "ampMaxHint": "Volume of the largest.",
+        "skew": "Contrast",
+        "skewHint": "High: many small and a few big (a fire). 1: evenly spread volumes.",
+        "spread": "Width",
+        "spreadHint": "Left/right scatter of events."
+      },
+      "Intensity": {
+        "fixed": "Nothing (fixed value)",
+        "wind": "Ember's wind",
+        "rain": "Ember's rain",
+        "tension": "Tension"
+      }
     }
   }
 }

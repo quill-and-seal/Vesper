@@ -12,7 +12,7 @@ import { SMOOTH } from "../constants.js";
 export class Voice {
   /**
    * @param {import("./output.js").AudioOutput} out
-   * @param {AudioBuffer} buffer
+   * @param {AudioBuffer|{output:AudioNode, stop:Function}} buffer  fichier décodé, ou lecteur procédural
    * @param {object} opts
    * @param {boolean} [opts.loop]
    * @param {"hrtf"|"stereo"|"off"} [opts.panning]
@@ -26,10 +26,16 @@ export class Voice {
     this.loop = loop;
     this.ended = false;
 
-    this.source = ctx.createBufferSource();
-    this.source.buffer = buffer;
-    this.source.loop = loop;
-    this.source.playbackRate.value = rate;
+    // Lecteur procédural : sa sortie remplace la lecture d'un fichier
+    this.player = buffer instanceof AudioBuffer ? null : buffer;
+    if (this.player) {
+      this.source = this.player.output;
+    } else {
+      this.source = ctx.createBufferSource();
+      this.source.buffer = buffer;
+      this.source.loop = loop;
+      this.source.playbackRate.value = rate;
+    }
 
     this.filter = ctx.createBiquadFilter();
     this.filter.type = "lowpass";
@@ -66,15 +72,18 @@ export class Voice {
     this.dry.connect(bus ?? out.spatialBus);
     this.send.connect(out.reverb.input);
 
-    this.source.onended = () => {
-      this.ended = true;
-      this.#disconnect();
-      onEnded?.(this);
-    };
+    if (!this.player) {
+      this.source.onended = () => {
+        this.ended = true;
+        this.#disconnect();
+        onEnded?.(this);
+      };
+    }
   }
 
   /** Démarre la lecture (une boucle commence à un endroit au hasard : deux sources identiques ne sonnent pas en phase). */
   start(when = 0, offset = null) {
+    if (this.player) return this;
     const dur = this.source.buffer?.duration ?? 0;
     const off = offset ?? (this.loop && dur > 1 ? Math.random() * dur : 0);
     this.source.start(when || this.out.now, off);
@@ -112,10 +121,19 @@ export class Voice {
     const t = this.out.now;
     this.gain.gain.cancelScheduledValues(t);
     this.gain.gain.setTargetAtTime(0, t, Math.max(0.01, fade / 4));
-    try {
-      this.source.stop(t + fade + 0.05);
-    } catch {
-      this.#disconnect();
+    if (this.player) {
+      // Le lecteur procédural n'a pas de fin : on l'arrête après le fondu
+      const player = this.player;
+      setTimeout(() => {
+        player.stop();
+        this.#disconnect();
+      }, (fade + 0.1) * 1000);
+    } else {
+      try {
+        this.source.stop(t + fade + 0.05);
+      } catch {
+        this.#disconnect();
+      }
     }
     this.ended = true;
   }

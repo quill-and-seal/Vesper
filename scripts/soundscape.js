@@ -16,6 +16,7 @@ import { MODULE_ID, FLAG_SOUNDSCAPE, SOUNDSCAPE_DEFAULTS, SMOOTH, dbToGain, sett
 import { normalizeLayer, conditionsMatch, eventsBetween } from "./soundscape-logic.js";
 import { hashString } from "./audio/reverb-presets.js";
 import { createSynth } from "./audio/synth.js";
+import { getPatch, patchIntensity, patchSignature } from "./patches.js";
 import { Voice } from "./audio/voice.js";
 import { readDarkness, readCombat, readWeather, readWind } from "./world.js";
 
@@ -41,7 +42,7 @@ export async function writeSoundscape(changes, scene = canvas.scene) {
 
 /** Ce qui fait changer de couche : signature qui oblige à recréer les sources. */
 function sourceSignature(l) {
-  return JSON.stringify([l.kind, l.kind === "synth" ? l.synth : l.paths]);
+  return JSON.stringify([l.kind, l.kind === "synth" ? [l.synth, patchSignature(l.synth)] : l.paths]);
 }
 
 export class Soundscape {
@@ -183,17 +184,7 @@ export class Soundscape {
   }
 
   #synthIntensity(type, state) {
-    switch (type) {
-      case "wind":
-        return state.wind > 0 ? state.wind : 0.35 + 0.15 * state.tension;
-      case "rain":
-        return state.weather === "rain" || state.weather === "storm" ? Math.max(0.2, state.weatherIntensity) : 0.5;
-      case "drone":
-      case "heartbeat":
-        return state.tension / 3;
-      default:
-        return 0.5;
-    }
+    return patchIntensity(getPatch(type), state);
   }
 
   #ensureSource(rt) {

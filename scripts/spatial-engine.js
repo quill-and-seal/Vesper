@@ -9,10 +9,12 @@
  * Les sons « gérés » ne sont plus joués par Foundry (voir ambient-sound.js) : Vesper les joue à sa place.
  */
 
-import { MODULE_ID, FLAG_SOUND, SOUND_DEFAULTS, TICK_MS, dbToGain, setting } from "./constants.js";
+import { MODULE_ID, FLAG_SOUND, FLAG_SOUNDSCAPE, SOUND_DEFAULTS, TICK_MS, dbToGain, setting } from "./constants.js";
 import { distanceGain, airCutoff, toMeters, occlusion, direction, OPEN_CUTOFF } from "./acoustics.js";
 import { dist } from "./geometry.js";
 import { Voice } from "./audio/voice.js";
+import { createSynth, synthFromPath } from "./audio/synth.js";
+import { getPatch, patchIntensity, patchSignature } from "./patches.js";
 import {
   readWalls,
   readMaterials,
@@ -22,7 +24,9 @@ import {
   readSceneAcoustics,
   placeAt,
   isolationBetween,
-  readDarkness
+  readDarkness,
+  readWind,
+  readWeather
 } from "./world.js";
 
 /** En dessous de ce volume (-70 dB), une voix ne mérite pas d'exister. */
@@ -34,6 +38,27 @@ const PRELOAD = 1.3;
 /** Réglages Vesper d'un son d'ambiance. */
 export function soundSettings(doc) {
   return { ...SOUND_DEFAULTS, ...(doc?.getFlag?.(MODULE_ID, FLAG_SOUND) ?? doc?.flags?.[MODULE_ID]?.[FLAG_SOUND] ?? {}) };
+}
+
+/**
+ * Recette procédurale jouée par ce son d'ambiance, ou null pour un fichier.
+ * Choisie dans la fenêtre du son (réglage « Son procédural »), ou désignée par son chemin (synth/fire.wav).
+ */
+export function soundPatch(doc) {
+  const id = soundSettings(doc).patch;
+  if (id && getPatch(id)) return id;
+  return synthFromPath(doc?.path);
+}
+
+/** État du monde qui règle l'intensité des sons procéduraux. */
+export function readWorldState(scene = canvas.scene) {
+  const w = readWeather(scene);
+  return {
+    wind: readWind(scene),
+    weather: w.kind,
+    weatherIntensity: w.intensity,
+    tension: Number(scene?.getFlag?.(MODULE_ID, FLAG_SOUNDSCAPE)?.tension) || 0
+  };
 }
 
 /** Vesper joue-t-il ce son à la place de Foundry ? */
@@ -149,6 +174,7 @@ export class SpatialEngine {
     this.out.reverb.setPlace(here.place, here.wet);
 
     const darkness = readDarkness();
+    this.worldState = readWorldState();
     const seen = new Set();
     for (const doc of canvas.scene.sounds ?? []) {
       if (!isManaged(doc)) continue;
@@ -225,12 +251,19 @@ export class SpatialEngine {
   }
 
   #updateSound(doc, darkness) {
+    const s = soundSettings(doc);
+    const patchId = soundPatch(doc);
+    const signature = patchId ? patchSignature(patchId) : null;
     let entry = this.entries.get(doc.id);
+    // Recette changée (modifiée dans l'atelier, ou autre recette choisie) : on relance le son
+    if (entry && entry.signature !== signature) {
+      this.#release(doc.id, 0.3);
+      entry = null;
+    }
     if (!entry) {
-      entry = { path: doc.path, voice: null, loading: false, played: false, caches: [] };
+      entry = { path: doc.path, voice: null, loading: false, played: false, caches: [], signature, patchId };
       this.entries.set(doc.id, entry);
     }
-    const s = soundSettings(doc);
     const radius = this.#radius(doc);
     const src = { x: doc.x, y: doc.y, elevation: doc.elevation ?? 0 };
     const audible = this.#audible(doc, darkness) && radius > 0;
@@ -263,7 +296,21 @@ export class SpatialEngine {
       }
       // Un son joué une seule fois peut rejouer quand on revient
       if (nearest >= radius) entry.played = false;
-      if (nearest < radius * PRELOAD && !entry.loading) this.out.load(doc.path);
+      if (!patchId && nearest < radius * PRELOAD && !entry.loading) this.out.load(doc.path);
+      return;
+    }
+
+    if (patchId) {
+      // Son procédural : calculé en direct, toujours en continu
+      const intensity = patchIntensity(getPatch(patchId), this.worldState, Number.isFinite(s.intensity) ? s.intensity : null);
+      if (!entry.voice) {
+        const player = createSynth(this.out.ctx, patchId);
+        player.setIntensity(intensity);
+        entry.voice = new Voice(this.out, player, { panning: setting("panning", "hrtf") });
+        entry.voice.set({ ...best, smooth: 0.25 });
+      } else entry.voice.player?.setIntensity(intensity);
+      entry.last = best;
+      entry.voice.set(best);
       return;
     }
 

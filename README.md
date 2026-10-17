@@ -2,7 +2,7 @@
 
 Son immersif pour **Foundry VTT v14**. Chaque joueur entend la scène **depuis son token** : les sons viennent de la bonne direction, faiblissent avec la distance comme dans la réalité, deviennent sourds derrière un mur, résonnent dans une caverne, et l'ambiance évolue toute seule avec le jour, la météo, le combat et la tension.
 
-Aucun nouvel outil de placement : Vesper reprend les **sons d'ambiance que tu poses déjà** avec les outils de Foundry. Aucune dépendance, aucun fichier à télécharger (les réverbérations et les couches « générées » sont calculées à la volée).
+Aucun nouvel outil de placement : Vesper reprend les **sons d'ambiance que tu poses déjà** avec les outils de Foundry. Aucune dépendance, aucun fichier à télécharger : les réverbérations sont calculées à la volée, et un **moteur de sons procéduraux** fabrique feu, vent, pluie, rivière, grillons… sans aucun enregistrement. Un **atelier sonore** permet de créer ses propres sons de la même façon.
 
 Un module de l'atelier [Quill & Seal](https://github.com/quill-and-seal).
 
@@ -57,6 +57,31 @@ Conditions d'une couche : **jour / nuit** (obscurité de la scène), **combat**,
 
 La **tension** (Calme, Inquiétant, Danger, Terreur) se règle d'un clic en haut de la fenêtre pendant la partie. Quatre modèles (forêt, tempête, taverne, donjon) posent des couches prêtes : les couches générées jouent tout de suite, il reste à choisir les fichiers des autres.
 
+## 4. Sons procéduraux et atelier sonore
+
+Un son procédural est **calculé en direct** au lieu d'être lu dans un fichier : il ne se répète jamais, et il réagit au monde. Le feu s'attise dans les rafales du vent d'Ember, la pluie suit l'intensité de l'averse, le cœur accélère avec la tension.
+
+**Modèles livrés** : feu de camp, torche, vent, pluie, rivière, gouttes (grotte), grillons, nappe de tension, battement de cœur.
+
+**Les utiliser**
+- **Sur la carte** : pose un son d'ambiance comme d'habitude, et choisis un **Son procédural** dans la section Vesper de sa fenêtre (le fichier se remplit tout seul). Distance, murs et réverbération s'appliquent comme pour un fichier. Le champ **Intensité** fixe la taille du feu (vide : il suit le vent).
+- **Dans le paysage sonore** : une **couche générée** propose les mêmes sons. Le modèle « Campement » pose un feu, des grillons la nuit et un peu de vent.
+
+**L'atelier sonore** (bouton fiole dans le calque Sons) sert à créer ses propres sons. Une recette est un empilement de **couches** :
+
+| Source | Pour faire |
+|---|---|
+| Bruit (blanc, rose, brun) | souffle, vent, eau, grondement |
+| Oscillateur | nappes, bourdons, sons magiques |
+| Événements | crépitements, gouttes, chants d'insectes, battements, pas lointains |
+
+Chaque couche passe dans des **filtres** (passe-bas, passe-haut, passe-bande…), et ses paramètres peuvent **osciller** ou **vaciller au hasard** (modulations). Le bouton graphique à côté d'un nombre le lie à l'**intensité** : une valeur au calme, une au maximum.
+
+- Les modèles livrés s'écoutent mais ne se modifient pas : **Dupliquer**, puis modifier la copie.
+- **Écouter** joue le son pendant qu'on le règle, avec un curseur d'intensité pour l'essayer.
+- Les sons de l'atelier sont enregistrés dans le monde et **partagés avec tous les joueurs**. Modifier un son relance tous ceux qui le jouent.
+- Des limites protègent les navigateurs des joueurs : 8 couches, 4 filtres et 4 modulations par couche, 60 événements par seconde.
+
 ## Réglages
 
 **Monde (MJ)** : Vesper joue les sons d'ambiance, réalisme de l'atténuation, absorption de l'air, perte des murs pleins / portes / murs limités, lieu acoustique par défaut, écoute du MJ sans token.
@@ -80,11 +105,17 @@ await vesper.setSoundscape({ volume: -3 });
 
 // Diagnostic : auditeurs, lieu, voix actives (volume en dB, coupure en Hz), couches
 vesper.describe();
+
+// Sons procéduraux
+vesper.allPatches();                 // modèles et sons de l'atelier
+vesper.openWorkshop("fire");
+await vesper.savePatch("my-forge", { label: "Forge", layers: [/* … */] });
 ```
 
 ## Développement
 
 - `npm test` : tests de la géométrie, de l'acoustique, des réverbérations et du calendrier des sons dispersés.
+- `node tools/render.mjs [dossier] [sons] [intensités] [secondes]` : rend les sons procéduraux en fichiers WAV (hors ligne, dans Chromium) et affiche leurs mesures. Pratique pour écouter un réglage.
 - `node tests/browser/run.mjs` : fait tourner le module entier dans Chromium (sans Foundry, avec un faux Foundry minimal) et **mesure le son produit** : baisse avec la distance, gauche/droite, murs et portes, réverbération, isolation, conditions des couches. Variables `PLAYWRIGHT` (chemin de playwright-core) et `CHROME` si besoin.
 
 ## Limites connues
@@ -92,3 +123,4 @@ vesper.describe();
 - Les sons joués par Foundry lui-même avec `playAtPosition` (certains modules, macros) ne passent pas par Vesper : utilise `vesper.playAt`.
 - La diffraction est approchée par cinq rayons autour de la source : une porte ouverte loin de la ligne directe ne laisse pas encore passer le son par le chemin réel.
 - Les effets « de base » et « étouffé » de Foundry sur un son sont ignorés pour les sons gérés (Vesper fait son propre filtrage).
+- Un son procédural posé sur la carte a besoin de Vesper : si « Géré par Vesper » est décoché, Foundry joue son fichier, qui est muet.

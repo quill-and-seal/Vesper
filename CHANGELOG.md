@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Moteur de sons procéduraux : sons calculés en direct à partir de couches (bruit, oscillateur, événements aléatoires), de filtres et de modulations, avec des paramètres liés à l'intensité.
+- Modèles livrés : feu de camp, torche, rivière, gouttes, grillons (nouveaux), vent, pluie, nappe de tension et battement de cœur (refaits avec le moteur).
+- Sons procéduraux posés sur la carte : « Son procédural » dans la fenêtre d'un son d'ambiance, avec distance, murs et réverbération ; intensité automatique (vent, pluie, tension) ou fixée.
+- Atelier sonore : créer, dupliquer, écouter en direct et partager ses propres sons.
+- Modèle de paysage « Campement » ; la forêt et le donjon utilisent les grillons et les gouttes générés.
+
 ## 0.1.0
 
 Première version.

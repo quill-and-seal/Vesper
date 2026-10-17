@@ -26,7 +26,11 @@ export const SOUND_DEFAULTS = Object.freeze({
   // true : le son vient d'une direction (stéréo / HRTF) ; false : nappe sans direction
   directional: true,
   // Taille de la source en cases : une rivière ou une foule est « grande » et faiblit moins vite
-  size: 1
+  size: 1,
+  // Son procédural joué à la place du fichier (identifiant d'une recette), ou null
+  patch: null,
+  // Intensité imposée au son procédural (0 à 1), ou null : elle suit le vent, la pluie ou la tension
+  intensity: null
 });
 
 /** Paysage sonore par défaut d'une scène. */

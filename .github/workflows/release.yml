@@ -43,7 +43,7 @@ jobs:
           mv module.tmp.json module.json
 
       - name: Créer l'archive
-        run: zip -r module.zip module.json scripts styles lang README.md LICENSE
+        run: zip -r module.zip module.json scripts styles lang synth README.md LICENSE
 
       - name: Joindre à la release
         uses: softprops/action-gh-release@v2

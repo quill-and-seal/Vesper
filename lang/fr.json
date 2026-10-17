@@ -104,7 +104,8 @@
       }
     },
     "Controls": {
-      "Soundscape": "Paysage sonore (Vesper)"
+      "Soundscape": "Paysage sonore (Vesper)",
+      "Workshop": "Atelier sonore (Vesper)"
     },
     "Soundscape": {
       "Title": "Paysage sonore — {scene}",
@@ -161,7 +162,18 @@
       "windHint": "Suit la force du vent d'Ember s'il est actif, sinon souffle doucement et forcit avec la tension.",
       "rainHint": "Suit l'intensité de la pluie d'Ember s'il est actif.",
       "droneHint": "Grave et lente, de plus en plus dissonante avec la tension.",
-      "heartbeatHint": "Accélère avec la tension (de 58 à 120 battements par minute)."
+      "heartbeatHint": "Accélère avec la tension (de 58 à 120 battements par minute).",
+      "fire": "Feu de camp",
+      "torch": "Torche",
+      "river": "Rivière",
+      "drips": "Gouttes (grotte)",
+      "crickets": "Grillons",
+      "fireHint": "Grondement qui vacille, crépitements et bûches qui éclatent. S'attise avec le vent d'Ember.",
+      "torchHint": "Flamme nerveuse et grésillements. S'agite avec le vent d'Ember.",
+      "riverHint": "Courant, gargouillis et bulles.",
+      "dripsHint": "Gouttes isolées qui résonnent, idéal avec l'acoustique « Caverne ».",
+      "cricketsHint": "Deux grillons proches et un chœur lointain.",
+      "customHint": "Son créé dans l'atelier sonore."
     },
     "When": {
       "Title": "Joue quand",
@@ -215,8 +227,10 @@
         "Mugs": "Chopes, rires",
         "Drips": "Gouttes",
         "Distant": "Bruits lointains",
-        "Heart": "Cœur"
-      }
+        "Heart": "Cœur",
+        "Fire": "Feu de camp"
+      },
+      "camp": "Campement"
     },
     "SoundConfig": {
       "Managed": "Géré par Vesper",
@@ -224,13 +238,136 @@
       "Directional": "Son directionnel",
       "DirectionalHint": "Le son vient d'un côté. Décoché : nappe sans direction (une pluie sur toute la zone).",
       "Size": "Taille de la source (cases)",
-      "SizeHint": "Une rivière, une foule, une cascade sont grandes : elles faiblissent moins vite et leur son est plus large."
+      "SizeHint": "Une rivière, une foule, une cascade sont grandes : elles faiblissent moins vite et leur son est plus large.",
+      "Patch": "Son procédural",
+      "PatchNone": "Aucun (fichier du son)",
+      "PatchHint": "Un son calculé en direct à la place du fichier : feu, rivière, grillons, ou un son de l'atelier. Murs, distance et réverbération s'appliquent comme pour un fichier.",
+      "Intensity": "Intensité",
+      "IntensityAuto": "auto",
+      "IntensityHint": "Vide : suit le vent, la pluie ou la tension selon le son. 0 à 1 pour la fixer (un petit feu, une grosse flambée)."
     },
     "Error": {
       "GMOnly": "Seul le MJ peut modifier le paysage sonore."
     },
     "Log": {
       "NoEmber": "Ember n'est pas actif : les conditions de météo des couches considèrent un temps clair."
+    },
+    "Workshop": {
+      "Title": "Atelier sonore",
+      "Builtins": "Modèles",
+      "Mine": "Mes sons",
+      "Play": "Écouter",
+      "Stop": "Arrêter",
+      "New": "Nouveau son",
+      "Duplicate": "Dupliquer",
+      "Delete": "Supprimer",
+      "DeleteConfirm": "Supprimer « {name} » ? Les sons de la carte et les couches qui l'utilisent n'auront plus de son.",
+      "NewName": "Nouveau son",
+      "CopyName": "{name} (copie)",
+      "BuiltinNote": "Modèle livré avec Vesper : écoute-le, puis duplique-le pour le modifier.",
+      "PreviewIntensity": "Intensité d'écoute",
+      "Name": "Nom",
+      "IntensitySource": "Intensité suit",
+      "Fixed": "Intensité fixe",
+      "FixedHint": "Utilisée quand l'intensité ne suit rien, ou en l'absence de vent ou de pluie.",
+      "Volume": "Volume",
+      "UseHint": "Pour l'utiliser : dans le paysage sonore (couche générée), ou sur un son posé (« Son procédural » dans sa fenêtre).",
+      "Empty": "Aucune couche. Ajoute un bruit, un oscillateur ou des événements.",
+      "Link": "Suivre l'intensité (une valeur au calme, une au maximum)",
+      "Unlink": "Valeur fixe",
+      "PairHint": "Au calme → au maximum",
+      "Mute": "Couper cette couche",
+      "RemoveLayer": "Supprimer la couche",
+      "Source": {
+        "noise": "Bruit",
+        "osc": "Oscillateur",
+        "events": "Événements"
+      },
+      "Color": "Couleur",
+      "Colors": {
+        "white": "Blanc (souffle)",
+        "pink": "Rose (eau, pluie)",
+        "brown": "Brun (grondement)"
+      },
+      "Wave": "Forme",
+      "Waves": {
+        "sine": "Sinus",
+        "triangle": "Triangle",
+        "square": "Carré",
+        "sawtooth": "Dent de scie"
+      },
+      "Freq": "Fréquence",
+      "Boost": "Gain",
+      "Output": "Sortie",
+      "Gain": "Volume",
+      "Pan": "Position stéréo",
+      "FiltersTitle": "Filtres",
+      "NoFilter": "Aucun filtre.",
+      "FilterType": "Filtre",
+      "Filters": {
+        "lowpass": "Passe-bas",
+        "highpass": "Passe-haut",
+        "bandpass": "Passe-bande",
+        "peaking": "Bosse",
+        "notch": "Coupe-bande"
+      },
+      "ModsTitle": "Modulations",
+      "NoMod": "Aucune modulation.",
+      "ModTarget": "Paramètre",
+      "ModKind": "Mouvement",
+      "ModRate": "Vitesse",
+      "ModDepth": "Ampleur",
+      "Mods": {
+        "lfo": "Oscille",
+        "jitter": "Vacille au hasard"
+      },
+      "Rhythm": "Rythme",
+      "Grain": "Grain",
+      "Grains": {
+        "noise": "Éclat (bruit)",
+        "tone": "Note brève"
+      },
+      "Ev": {
+        "rate": "Cadence",
+        "rateHint": "Nombre moyen d'événements par seconde.",
+        "regularity": "Régularité",
+        "regularityHint": "0 : au hasard (crépitements). 1 : métronome (battement de cœur).",
+        "burstChance": "Rafales",
+        "burstChanceHint": "Probabilité qu'un événement soit une rafale (une poche de sève, un chirp de grillon).",
+        "burstMin": "Rafale min",
+        "burstMinHint": "Nombre minimum d'événements dans une rafale.",
+        "burstMax": "Rafale max",
+        "burstMaxHint": "Nombre maximum d'événements dans une rafale.",
+        "burstGap": "Écart",
+        "burstGapHint": "Temps entre deux événements d'une rafale.",
+        "grain": "Type",
+        "decay": "Durée",
+        "decayHint": "Temps d'extinction d'un événement : 1 ms est un clic sec, 60 ms un battement.",
+        "freqMin": "Hauteur min",
+        "freqMinHint": "Fréquence la plus grave (choisie au hasard entre min et max).",
+        "freqMax": "Hauteur max",
+        "freqMaxHint": "Fréquence la plus aiguë.",
+        "q": "Netteté",
+        "qHint": "Largeur de la bande de l'éclat : faible = large et sourd, fort = étroit et sifflant.",
+        "ring": "Résonance",
+        "ringHint": "Ajoute une note à l'éclat (le « tic » du bois qui éclate).",
+        "drop": "Glissement",
+        "dropHint": "La hauteur glisse pendant la note : < 1 descend (battement), > 1 monte (goutte, bulle).",
+        "ampMin": "Volume min",
+        "ampMinHint": "Volume des plus petits événements.",
+        "ampMax": "Volume max",
+        "ampMaxHint": "Volume des plus gros.",
+        "skew": "Contraste",
+        "skewHint": "Grand : beaucoup de petits et quelques gros (un feu). 1 : volumes répartis également.",
+        "spread": "Largeur",
+        "spreadHint": "Dispersion gauche/droite des événements."
+      },
+      "Intensity": {
+        "fixed": "Rien (valeur fixe)",
+        "wind": "Le vent d'Ember",
+        "rain": "La pluie d'Ember",
+        "tension": "La tension"
+      }
     }
   }
 }

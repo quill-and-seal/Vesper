@@ -2,8 +2,9 @@
   "name": "vesper-audio",
   "private": true,
   "type": "module",
-  "description": "Outils de développement de Vesper (le module Foundry n'a besoin d'aucune dépendance).",
+  "description": "Outils de d\u00e9veloppement de Vesper (le module Foundry n'a besoin d'aucune d\u00e9pendance).",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "render": "node tools/render.mjs"
   }
 }
