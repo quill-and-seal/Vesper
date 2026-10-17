@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vesper — aperçu du champ sonore</title>
+<style>body{margin:0;background:#2b2722;font:13px sans-serif;color:#eee} canvas{display:block} .t{position:absolute;left:8px;top:6px}</style>
+<script src="./stub.js"></script>
+<script type="module">
+  import { contourSegments, labelPoint, paintPixels, RINGS, combineGrids, smoothGrid, SILENT_DB } from "/scripts/field.js";
+  const params = new URLSearchParams(location.search);
+  const mode = params.get("mode") ?? "single";
+  const door = params.get("door") ?? "closed";
+  await import("/scripts/main.js");
+  await Hooks.call("init");
+  await Hooks.call("setup");
+  await Hooks.call("ready");
+  await Hooks.call("canvasReady");
+  const { spatial } = game.modules.get("vesper-audio").api.engine;
+
+  // Scène : 24 × 16 cases de 100 px. Une pièce à gauche (porte au milieu du mur droit), un mur isolé en bas à droite.
+  const W = 2400, H = 1600;
+  const wall = (a, b, c, d, extra) => T.wall(a, b, c, d, extra);
+  wall(200, 300, 1000, 300); wall(200, 300, 200, 1100); wall(200, 1100, 1000, 1100);
+  wall(1000, 300, 1000, 640); wall(1000, 760, 1000, 1100);
+  wall(1000, 640, 1000, 760, { door: 1, ds: door === "open" ? 1 : 0 });
+  wall(1500, 900, 2100, 900); wall(1500, 900, 1500, 1400);
+  // Tenture (mur « limité ») au fond de la pièce
+  wall(600, 300, 600, 600, { sound: 10 });
+  spatial.refreshWalls();
+
+  const sources = mode === "all"
+    ? [T.makeSound("a", 500, 750, { radius: 15 }), T.makeSound("b", 1800, 600, { radius: 12, volume: 0.6 }), T.makeSound("c", 1800, 1200, { radius: 9 })]
+    : [T.makeSound("a", 500, 750, { radius: 18 })];
+  spatial.sync();
+
+  const t0 = performance.now();
+  let grid;
+  if (mode === "all") {
+    const area = { x0: 0, y0: 0, x1: W, y1: H };
+    for (const doc of sources) {
+      const g = spatial.field(spatial.sourceOf(doc, { relative: false }), { rect: area, step: 50 });
+      if (!grid) grid = { ...g, db: new Float32Array(g.db.length).fill(SILENT_DB), muffle: new Float32Array(g.db.length) };
+      combineGrids(grid, g);
+    }
+  } else {
+    grid = spatial.field(spatial.sourceOf(sources[0]), { fast: params.get("fast") === "1" });
+  }
+  const ms = performance.now() - t0;
+
+  // Dessin, à l'échelle 0.4 (comme une carte vue de loin)
+  const S = 0.4;
+  const cv = document.createElement("canvas");
+  cv.width = W * S; cv.height = H * S;
+  document.body.append(cv);
+  const ctx = cv.getContext("2d");
+  // Fond : un faux sol de carte
+  ctx.fillStyle = "#4a4236"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = "rgba(0,0,0,0.18)";
+  for (let x = 0; x <= W; x += 100) { ctx.beginPath(); ctx.moveTo(x * S, 0); ctx.lineTo(x * S, H * S); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 100) { ctx.beginPath(); ctx.moveTo(0, y * S); ctx.lineTo(W * S, y * S); ctx.stroke(); }
+  // Champ
+  const img = new ImageData(grid.w, grid.h);
+  paintPixels(grid, img.data);
+  const off = document.createElement("canvas"); off.width = grid.w; off.height = grid.h;
+  off.getContext("2d").putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, (grid.x0 - grid.step / 2) * S, (grid.y0 - grid.step / 2) * S, grid.w * grid.step * S, grid.h * grid.step * S);
+  // Anneaux
+  const taken = [];
+  const smooth = smoothGrid(grid);
+  for (const level of RINGS) {
+    const segs = contourSegments(smooth, mode === "all" ? level - 6 : level);
+    for (const [w, c] of [[3, "rgba(0,0,0,.35)"], [1.3, level === -6 ? "rgba(255,255,255,.85)" : "rgba(255,255,255,.6)"]]) {
+      ctx.lineWidth = w; ctx.strokeStyle = c; ctx.beginPath();
+      for (const s of segs) { ctx.moveTo(s[0] * S, s[1] * S); ctx.lineTo(s[2] * S, s[3] * S); }
+      ctx.stroke();
+    }
+    if (mode !== "all") {
+      const p = labelPoint(segs, taken, 18 / S);
+      if (p) taken.push(p);
+      if (p) { ctx.font = "bold 12px sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText(`${level} dB`, p[0] * S + 3, p[1] * S + 4); ctx.fillStyle = "#fff"; ctx.fillText(`${level} dB`, p[0] * S + 3, p[1] * S + 4); }
+    }
+  }
+  // Murs et porte
+  for (const w of canvas.walls.placeables) {
+    const d = w.document;
+    ctx.lineWidth = d.door ? 5 : d.sound === 10 ? 3 : 5;
+    ctx.strokeStyle = d.door ? (d.ds === 1 ? "#5fd35f" : "#d9a13b") : d.sound === 10 ? "#9aa" : "#eee";
+    if (d.sound === 10) ctx.setLineDash([6, 4]); else ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(d.c[0] * S, d.c[1] * S); ctx.lineTo(d.c[2] * S, d.c[3] * S); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  // Sources
+  for (const s of sources) { ctx.fillStyle = "#f2a23c"; ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s.x * S, s.y * S, 6, 0, 7); ctx.fill(); ctx.stroke(); }
+  window.__done = { ok: true, ms: Math.round(ms), points: grid.w * grid.h };
+</script>

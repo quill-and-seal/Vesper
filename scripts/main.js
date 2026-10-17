@@ -14,6 +14,8 @@ import { REVERB_PRESETS } from "./audio/reverb-presets.js";
 import { SYNTH_TYPES } from "./audio/synth.js";
 import { setCustomPatches, getPatch, allPatches, customPatches, normalizePatch } from "./patches.js";
 import { Workshop } from "./workshop.js";
+import { createVesperLayerClass, LAYER_NAME } from "./layer.js";
+import { Palette } from "./palette.js";
 
 const out = new AudioOutput();
 const spatial = new SpatialEngine(out);
@@ -88,6 +90,19 @@ Hooks.once("init", () => {
     }
   });
 
+  // Outil « Poser » : son choisi dans la palette, et affichage de toutes les sources
+  game.settings.register(MODULE_ID, "placeChoice", { scope: "client", config: false, type: Object, default: {} });
+  game.settings.register(MODULE_ID, "showAll", {
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false,
+    onChange: () => canvas.vesper?.refreshAll?.()
+  });
+
+  // Calque de Vesper (repères des sources, carte du champ sonore)
+  CONFIG.Canvas.layers[LAYER_NAME] = { layerClass: createVesperLayerClass({ engine }), group: "interface" };
+
   registerRegionBehavior();
   registerAmbientSoundClass();
 
@@ -153,33 +168,75 @@ Hooks.on("getSceneControlButtons", (controls) => {
   if (!game.user.isGM) return;
   const button = (fn) => ({ button: true, onChange: fn });
   const tools = {
+    select: { name: "select", title: "VESPER.Controls.Select", icon: "fa-solid fa-arrow-pointer", order: 0 },
+    place: { name: "place", title: "VESPER.Controls.Place", icon: "fa-solid fa-location-dot", order: 1 },
+    palette: {
+      name: "palette",
+      title: "VESPER.Controls.Palette",
+      icon: "fa-solid fa-palette",
+      order: 2,
+      ...button(() => new Palette().render({ force: true }))
+    },
+    showAll: {
+      name: "showAll",
+      title: "VESPER.Controls.ShowAll",
+      icon: "fa-solid fa-layer-group",
+      order: 3,
+      toggle: true,
+      active: !!game.settings.get(MODULE_ID, "showAll"),
+      onChange: (event, active) => game.settings.set(MODULE_ID, "showAll", typeof active === "boolean" ? active : !game.settings.get(MODULE_ID, "showAll"))
+    },
     soundscape: {
       name: "soundscape",
       title: "VESPER.Controls.Soundscape",
       icon: "fa-solid fa-tree",
-      order: 0,
+      order: 4,
       ...button(() => new SoundscapeConfig(engine).render({ force: true }))
     },
     workshop: {
       name: "workshop",
       title: "VESPER.Controls.Workshop",
       icon: "fa-solid fa-flask",
-      order: 1,
+      order: 5,
       ...button(() => new Workshop(engine).render({ force: true }))
     }
   };
   // Sa propre case dans la barre de gauche, à côté des Sons de Foundry
   const order = (Array.isArray(controls) ? null : controls.sounds?.order) ?? Object.keys(controls).length;
   const control = {
-    name: "vesper",
+    name: LAYER_NAME,
     title: "VESPER.Controls.Group",
     icon: "fa-solid fa-ear-listen",
+    layer: LAYER_NAME,
     order: order + 0.5,
     visible: true,
-    activeTool: "soundscape"
+    activeTool: "select"
   };
   if (Array.isArray(controls)) controls.push({ ...control, tools: Object.values(tools) });
   else controls.vesper = { ...control, tools };
+});
+
+/** Le calque de Vesper redessine ses repères et ses cartes (sons, murs ou Régions changés). */
+let layerTimer = null;
+function refreshLayer({ markers = true } = {}) {
+  clearTimeout(layerTimer);
+  layerTimer = setTimeout(() => {
+    const layer = canvas.vesper;
+    if (!layer) return;
+    if (markers) layer.refreshMarkers?.();
+    layer.refreshHover?.();
+    layer.refreshAll?.();
+  }, 60);
+}
+
+// Zoom : les repères gardent la même taille à l'écran
+let lastZoom = null;
+Hooks.on("canvasPan", (c, view) => {
+  const zoom = view?.scale ?? canvas.stage?.scale?.x;
+  if (zoom === lastZoom) return;
+  lastZoom = zoom;
+  canvas.vesper?.refreshMarkers?.();
+  canvas.vesper?.refreshHover?.();
 });
 
 /* -------------------------------------------- */
@@ -208,7 +265,10 @@ for (const hook of ["createWall", "updateWall", "deleteWall"]) {
   Hooks.on(hook, (wall) => {
     if (wall.parent?.id !== canvas.scene?.id) return;
     clearTimeout(wallsTimer);
-    wallsTimer = setTimeout(() => spatial.refreshWalls(), 30);
+    wallsTimer = setTimeout(() => {
+      spatial.refreshWalls();
+      refreshLayer({ markers: false });
+    }, 30);
   });
 }
 
@@ -218,7 +278,10 @@ const onRegionChange = (doc) => {
   const scene = doc.parent?.documentName === "Scene" ? doc.parent : doc.parent?.parent;
   if (scene?.id !== canvas.scene?.id) return;
   clearTimeout(regionsTimer);
-  regionsTimer = setTimeout(() => spatial.refreshZones(), 50);
+  regionsTimer = setTimeout(() => {
+    spatial.refreshZones();
+    refreshLayer({ markers: false });
+  }, 50);
 };
 for (const hook of ["createRegion", "updateRegion", "deleteRegion", "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior"]) {
   Hooks.on(hook, onRegionChange);
@@ -229,6 +292,7 @@ for (const hook of ["createAmbientSound", "updateAmbientSound", "deleteAmbientSo
   Hooks.on(hook, (doc) => {
     if (doc.parent?.id !== canvas.scene?.id) return;
     spatial.refreshSounds();
+    refreshLayer();
   });
 }
 

@@ -106,7 +106,11 @@
     "Controls": {
       "Soundscape": "Paysage sonore",
       "Workshop": "Atelier sonore",
-      "Group": "Vesper — son immersif"
+      "Group": "Vesper — son immersif",
+      "Select": "Sélectionner (survol : champ sonore)",
+      "Place": "Poser un son",
+      "Palette": "Choisir le son à poser",
+      "ShowAll": "Afficher le champ de toutes les sources"
     },
     "Soundscape": {
       "Title": "Paysage sonore — {scene}",
@@ -374,6 +378,14 @@
       "NearHint": "La couche ne s'entend qu'à moins de cette distance de la source, et monte quand on s'approche (le grondement d'un feu). 0 : toujours.",
       "PreviewDistance": "Distance d'écoute",
       "PreviewDistanceHint": "Pour essayer les couches « seulement de près ». Dans le paysage sonore, ces couches restent muettes (pas de source)."
+    },
+    "Palette": {
+      "Title": "Son à poser",
+      "Hint": "Choisis un son, puis clique sur la scène avec l'outil « Poser » (Maj : au centre de la case). Survole une source pour voir comment son son se répand.",
+      "File": "Fichier audio…",
+      "Radius": "Rayon",
+      "Volume": "Volume",
+      "NoFile": "Choisis d'abord un fichier audio dans la palette."
     }
   }
 }

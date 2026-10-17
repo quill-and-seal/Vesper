@@ -64,6 +64,7 @@ globalThis.foundry = {
     fields: new Proxy({}, { get: () => class { constructor(o) { this.o = o; } } })
   },
   audio: { AudioHelper: { inputToVolume: (v) => Math.pow(v, 1.5) } },
+  canvas: { layers: { InteractionLayer: class {} } },
   applications: {
     api: {
       ApplicationV2: class {
@@ -123,6 +124,7 @@ class BaseAmbientSound {
 }
 
 globalThis.CONFIG = {
+  Canvas: { layers: {} },
   AmbientSound: { objectClass: BaseAmbientSound },
   RegionBehavior: { dataModels: {}, typeIcons: {} }
 };

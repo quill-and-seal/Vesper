@@ -106,7 +106,11 @@
     "Controls": {
       "Soundscape": "Soundscape",
       "Workshop": "Sound workshop",
-      "Group": "Vesper — immersive sound"
+      "Group": "Vesper — immersive sound",
+      "Select": "Select (hover: sound field)",
+      "Place": "Place a sound",
+      "Palette": "Choose the sound to place",
+      "ShowAll": "Show the field of every source"
     },
     "Soundscape": {
       "Title": "Soundscape — {scene}",
@@ -374,6 +378,14 @@
       "NearHint": "The layer is only heard within this distance of the source, louder as you get closer (a fire's roar). 0: always.",
       "PreviewDistance": "Listening distance",
       "PreviewDistanceHint": "To try « only up close » layers. In the soundscape these layers stay silent (no source)."
+    },
+    "Palette": {
+      "Title": "Sound to place",
+      "Hint": "Pick a sound, then click the scene with the « Place » tool (Shift: grid center). Hover a source to see how its sound spreads.",
+      "File": "Audio file…",
+      "Radius": "Radius",
+      "Volume": "Volume",
+      "NoFile": "Pick an audio file in the palette first."
     }
   }
 }

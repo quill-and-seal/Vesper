@@ -35,6 +35,26 @@ Dans la fenêtre d'un son, une section **Vesper** ajoute :
 | Son directionnel | Décoché, le son est une nappe sans direction (une pluie sur toute la zone). |
 | Taille de la source | Une rivière, une foule, une cascade sont « grandes » : elles faiblissent moins vite près de la source et sonnent plus large. |
 
+### Poser et voir le son
+
+La case **Vesper** (icône d'oreille, dans la barre de gauche) a ses propres outils :
+
+- **Palette** : choisis le son à poser (feu, rivière, grillons, un son de l'atelier ou un fichier audio), son rayon et son volume.
+- **Poser** : clique sur la scène pour poser le son choisi (Maj : au centre de la case). C'est un vrai son d'ambiance de Foundry, réglable comme les autres.
+- **Sélectionner** : survole la pastille d'une source pour voir **comment son son se répand**. Clic ou clic droit : ses réglages. Glisser : la déplacer, la carte suit en direct.
+- **Tout afficher** : la carte de toutes les sources de la scène, pour repérer les zones silencieuses ou trop chargées.
+
+La carte montre exactement ce que Vesper joue, calculée avec le même moteur :
+
+| | |
+|---|---|
+| Dégradé **chaud** (jaune, orange) | le son arrive direct |
+| Dégradé **froid** (bleu) | le son arrive étouffé par un mur, une porte fermée ou l'isolation d'une Région |
+| Clair et opaque → sombre et transparent | fort près de la source → faible vers le bord du rayon |
+| Anneaux | -6, -12, -24 et -36 dB par rapport à la source |
+
+Ouvrir une porte ou déplacer un mur met la carte à jour aussitôt.
+
 ## 2. L'acoustique des lieux (Régions)
 
 Ajoute à une Région le comportement **Acoustique (Vesper)** :

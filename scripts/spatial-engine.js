@@ -12,6 +12,7 @@
 import { MODULE_ID, FLAG_SOUND, FLAG_SOUNDSCAPE, SOUND_DEFAULTS, TICK_MS, dbToGain, setting } from "./constants.js";
 import { distanceGain, airCutoff, toMeters, occlusion, direction, OPEN_CUTOFF } from "./acoustics.js";
 import { dist } from "./geometry.js";
+import { computeGrid } from "./field.js";
 import { Voice } from "./audio/voice.js";
 import { createSynth, synthFromPath } from "./audio/synth.js";
 import { getPatch, patchIntensity, patchSignature } from "./patches.js";
@@ -208,7 +209,7 @@ export class SpatialEngine {
    * Calcule ce qu'entend un auditeur d'une source.
    * @returns {{gain:number,cutoff:number,send:number,dir:object,d:number}}
    */
-  hear(listener, src, { radius, size = 1, walls = true, easing = true, directional = true, volume = 1, cache = null }) {
+  hear(listener, src, { radius, size = 1, walls = true, easing = true, directional = true, volume = 1, cache = null, wallList = null, rays = null }) {
     const d = dist(listener.x, listener.y, src.x, src.y);
     const cell = this.metrics.size;
     if (d >= radius) return { gain: 0, cutoff: OPEN_CUTOFF, send: 0, dir: null, d };
@@ -232,9 +233,9 @@ export class SpatialEngine {
       const key = `${Math.round(listener.x / 4)},${Math.round(listener.y / 4)},${Math.round(src.x / 4)},${Math.round(src.y / 4)},${this.wallsVersion}`;
       if (cache && cache.key === key) ({ occ, iso } = cache);
       else {
-        occ = occlusion(listener, src, this.walls, {
+        occ = occlusion(listener, src, wallList ?? this.walls, {
           spread: cell * 0.5 * size,
-          rays: setting("occlusionQuality", "high") === "high" ? 5 : 1,
+          rays: rays ?? (setting("occlusionQuality", "high") === "high" ? 5 : 1),
           materials: this.materials
         });
         iso = isolationBetween(listener, src, this.zones);
@@ -247,7 +248,64 @@ export class SpatialEngine {
     // Réverbération : diminue moins vite que le son direct (le lointain paraît plus « dans la salle »)
     const send = volume * Math.sqrt(gDist) * (0.35 + 0.65 * occ.gain) * dbToGain(-iso.loss * 0.5);
     const dir = directional ? direction(src.x - listener.x, src.y - listener.y, cell * 1.5 * size) : { x: 0, y: 1, z: 0, pan: 0 };
-    return { gain, cutoff, send, dir, d };
+    // Part des murs et de l'isolation seule (pour la carte du champ sonore : son direct ou étouffé)
+    const occlusionGain = occ.gain * dbToGain(-iso.loss);
+    return { gain, cutoff, send, dir, d, occlusion: occlusionGain };
+  }
+
+  /**
+   * Champ sonore d'un son d'ambiance (ou d'une source quelconque) : grille de ce qu'on entendrait autour.
+   * @param {object} src     { x, y, radius (px), size?, walls?, easing?, volume? }
+   * @param {object} [opts]
+   * @param {number} [opts.step]     pas de la grille (px) ; par défaut un quart de case
+   * @param {boolean} [opts.fast]    calcul grossier (pendant un glisser)
+   * @param {object} [opts.rect]     zone à couvrir (par défaut le carré du rayon)
+   */
+  field(src, { step = null, fast = false, rect = null } = {}) {
+    const cell = this.metrics.size;
+    const r = src.radius;
+    const area = rect ?? { x0: src.x - r, y0: src.y - r, x1: src.x + r, y1: src.y + r };
+    // Seuls les murs proches de la source comptent
+    const near = this.walls.filter((w) => {
+      const [x1, y1, x2, y2] = w.c;
+      return Math.max(x1, x2) >= src.x - r && Math.min(x1, x2) <= src.x + r && Math.max(y1, y2) >= src.y - r && Math.min(y1, y2) <= src.y + r;
+    });
+    const opts = {
+      radius: r,
+      size: src.size ?? 1,
+      walls: src.walls !== false,
+      easing: src.easing !== false,
+      directional: false,
+      volume: src.volume ?? 1,
+      wallList: near,
+      rays: fast ? 1 : 5
+    };
+    const point = { x: 0, y: 0, elevation: src.elevation ?? 0 };
+    const source = { x: src.x, y: src.y, elevation: src.elevation ?? 0 };
+    return computeGrid(
+      (x, y) => {
+        point.x = x;
+        point.y = y;
+        return this.hear(point, source, opts);
+      },
+      area,
+      step ?? (fast ? cell / 1.5 : cell / 4)
+    );
+  }
+
+  /** Source décrite à partir d'un son d'ambiance de Foundry (pour le champ sonore). */
+  sourceOf(doc, { relative = true } = {}) {
+    const s = soundSettings(doc);
+    return {
+      x: doc.x,
+      y: doc.y,
+      elevation: doc.elevation ?? 0,
+      radius: this.#radius(doc),
+      size: Math.max(0.25, Number(s.size) || 1),
+      walls: doc.walls !== false,
+      easing: doc.easing !== false,
+      volume: relative ? 1 : Number.isFinite(doc.volume) ? doc.volume : 0.5
+    };
   }
 
   #updateSound(doc, darkness) {

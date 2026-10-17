@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Outil « Poser » dans la case Vesper, avec une palette : sons procéduraux, sons de l'atelier ou fichier audio, rayon et volume par défaut.
+- Carte du champ sonore au survol d'une source : dégradé chaud là où le son arrive direct, froid là où il arrive étouffé par un mur, anneaux à -6, -12, -24 et -36 dB. Calculée avec le moteur du jeu (distance, murs, portes, isolation des Régions), elle suit la source en direct pendant qu'on la déplace.
+- Bouton « Tout afficher » : la carte de toutes les sources de la scène à la fois.
+- Repères des sources sur le calque Vesper : clic ou clic droit pour ouvrir leurs réglages, glisser pour les déplacer (Maj : au centre de la case).
+- Correction : deux murs qui se rejoignent en coin ne laissent plus passer le son par une fente invisible.
+
 ## 0.2.3
 
 - Feu de camp plus doux, sur le modèle d'une cheminée : crépitements plus rares, plus petits et plus chauds (médiums plutôt qu'aigus), moins de rafales ; bûches qui éclatent plus rares et plus sourdes. Crête divisée par deux environ.

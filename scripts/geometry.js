@@ -3,8 +3,9 @@
  */
 
 /**
- * Les segments [a,b] et [c,d] se croisent-ils (au sens strict, sans toucher les extrémités) ?
- * Un rayon qui frôle le bout d'un mur ne compte pas : le son contourne le coin.
+ * Le rayon [a,b] traverse-t-il le mur [c,d] ?
+ * Les extrémités du rayon ne comptent pas (une source posée contre un mur reste de son côté),
+ * mais celles du mur comptent : deux murs qui se rejoignent en coin ne laissent pas de fente.
  */
 export function segmentsCross(ax, ay, bx, by, cx, cy, dx, dy) {
   const rX = bx - ax;
@@ -18,7 +19,7 @@ export function segmentsCross(ax, ay, bx, by, cx, cy, dx, dy) {
   const tA = (qpX * sY - qpY * sX) / denom;
   const tC = (qpX * rY - qpY * rX) / denom;
   const eps = 1e-6;
-  return tA > eps && tA < 1 - eps && tC > eps && tC < 1 - eps;
+  return tA > eps && tA < 1 - eps && tC >= -eps && tC <= 1 + eps;
 }
 
 /** Aire d'un polygone donné en tableau plat [x0,y0,x1,y1,…] (valeur absolue). */

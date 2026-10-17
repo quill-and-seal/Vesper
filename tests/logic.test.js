@@ -257,3 +257,67 @@ test("procédural : couches « seulement de près »", () => {
   assert.equal(fire.layers.find((l) => l.id === "roar").near, 1);
   assert.equal(fire.layers.find((l) => l.id === "crackle").near, 0);
 });
+
+import { computeGrid, contourSegments, labelPoint, colorAt, mufflePart, combineGrids, smoothGrid, SILENT_DB } from "../scripts/field.js";
+import { soundDataFor } from "../scripts/layer.js";
+
+test("champ sonore : grille, anneaux à la bonne distance", () => {
+  // Source idéale : -6 dB par doublement à partir de 100 px, silence au-delà de 1000 px
+  const hearAt = (x, y) => {
+    const d = Math.hypot(x, y);
+    if (d >= 1000) return { gain: 0, occlusion: 1 };
+    return { gain: d <= 100 ? 1 : 100 / d, occlusion: x > 300 ? 0.1 : 1 };
+  };
+  const g = computeGrid(hearAt, { x0: -1000, y0: -1000, x1: 1000, y1: 1000 }, 25);
+  assert.equal(g.w, 81);
+  const ring = contourSegments(g, -12); // -12 dB ↔ 400 px
+  assert.ok(ring.length > 20);
+  for (const s of ring) {
+    const r = Math.hypot(s[0], s[1]);
+    assert.ok(Math.abs(r - 400) < 30, `anneau -12 dB à ${r.toFixed(0)} px`);
+  }
+  // La part étouffée suit le gain des murs
+  const k = (j, i) => j * g.w + i;
+  assert.equal(g.muffle[k(40, 40)], 0);
+  assert.equal(g.muffle[k(40, 70)], 1);
+  // Hors du rayon : silence
+  assert.equal(g.db[0], SILENT_DB);
+  // Lissage : pas de fuite hors du rayon
+  assert.equal(smoothGrid(g).db[0], SILENT_DB);
+});
+
+test("champ sonore : couleurs, étiquettes, addition", () => {
+  const warm = colorAt(-3, 0);
+  const cool = colorAt(-3, 1);
+  assert.ok(warm[0] > warm[2], "son direct : chaud (rouge > bleu)");
+  assert.ok(cool[2] > cool[0], "son étouffé : froid (bleu > rouge)");
+  assert.equal(colorAt(-80, 0)[3], 0, "trop faible : transparent");
+  assert.ok(colorAt(-3, 0)[3] > colorAt(-40, 0)[3], "plus opaque près de la source");
+  assert.equal(mufflePart(1), 0);
+  assert.equal(mufflePart(Math.pow(10, -18 / 20)), 1);
+  // Étiquettes : pas l'une sur l'autre
+  const a = labelPoint([[0, 0, 100, 0]]);
+  const b = labelPoint([[0, 0, 102, 2]], [a], 18);
+  assert.notDeepEqual(a, b);
+  // Deux sources égales : +3 dB
+  const mk = () => ({ db: Float32Array.from([-10, SILENT_DB]), muffle: Float32Array.from([0, 0]) });
+  const t = { db: Float32Array.from([SILENT_DB, SILENT_DB]), muffle: new Float32Array(2) };
+  combineGrids(t, mk());
+  combineGrids(t, mk());
+  assert.ok(Math.abs(t.db[0] - (-10 + 10 * Math.log10(2))) < 1e-4);
+  assert.equal(t.db[1], SILENT_DB);
+});
+
+test("palette : données du son posé", () => {
+  setCustomPatches({});
+  const d = soundDataFor({ source: "patch", patch: "fire", radius: 6, volume: 0.4 }, { x: 10.4, y: 20.6 }, 1.5);
+  assert.equal(d.x, 10);
+  assert.equal(d.y, 21);
+  assert.equal(d.radius, 9);
+  assert.match(d.path, /synth\/procedural\.wav$/);
+  assert.equal(d.flags["vesper-audio"].sound.patch, "fire");
+  const f = soundDataFor({ source: "file", path: "sounds/forge.ogg", radius: 4, volume: 0.8 }, { x: 0, y: 0 }, 5);
+  assert.equal(f.path, "sounds/forge.ogg");
+  assert.equal(f.flags["vesper-audio"].sound.patch, null);
+  assert.equal(f.radius, 20);
+});
