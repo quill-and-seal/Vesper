@@ -73,6 +73,8 @@ export class Workshop extends ApplicationV2 {
     this.engine = engine;
     this.patchId = options.patchId ?? "fire";
     this.previewIntensity = null;
+    // Couches dépliées (détails visibles)
+    this.expanded = new Set();
     // Distance d'écoute (cases) : loin par défaut, comme la plupart du temps en jeu
     this.previewDistance = 3;
     this.player = null;
@@ -86,7 +88,7 @@ export class Workshop extends ApplicationV2 {
     tag: "form",
     classes: ["vesper", "vesper-workshop"],
     window: { icon: "fa-solid fa-flask", resizable: true },
-    position: { width: 720, height: 780 },
+    position: { width: 920, height: 760 },
     form: { handler: Workshop.#onSubmit, submitOnChange: true, closeOnSubmit: false },
     actions: {
       play: Workshop.#onPlay,
@@ -100,7 +102,11 @@ export class Workshop extends ApplicationV2 {
       removeFilter: Workshop.#onRemoveFilter,
       addMod: Workshop.#onAddMod,
       removeMod: Workshop.#onRemoveMod,
-      link: Workshop.#onLink
+      link: Workshop.#onLink,
+      pick: Workshop.#onPick,
+      expand: Workshop.#onExpand,
+      saveLibrary: Workshop.#onSaveLibrary,
+      removeLibrary: Workshop.#onRemoveLibrary
     }
   };
 
@@ -137,14 +143,6 @@ export class Workshop extends ApplicationV2 {
   _onRender(context, options) {
     super._onRender?.(context, options);
     const root = this.element;
-    // Changer de recette : un « change » sur la liste, hors du formulaire de la recette
-    root.querySelector(".vw-pick")?.addEventListener("change", (ev) => {
-      ev.stopPropagation();
-      this.patchId = ev.currentTarget.value;
-      this.previewIntensity = null;
-      this.#restartPreview();
-      this.render();
-    });
     // Intensité d'écoute : n'est pas enregistrée
     const slider = root.querySelector(".vw-preview-intensity");
     slider?.addEventListener("input", (ev) => {
@@ -254,6 +252,7 @@ export class Workshop extends ApplicationV2 {
         </span>`
       : "";
     const icon = { noise: "fa-wave-square", osc: "fa-wave-sine", events: "fa-burst" }[l.source.type] ?? "fa-wave-square";
+    const open = this.expanded.has(l.id);
 
     const filters = l.filters
       .map(
@@ -283,14 +282,17 @@ export class Workshop extends ApplicationV2 {
       .join("");
 
     return `
-      <fieldset class="vw-layer ${l.mute ? "is-muted" : ""}">
+      <fieldset class="vw-layer ${l.mute ? "is-muted" : ""} ${open ? "is-open" : ""}">
         <input type="hidden" name="layers.${p}.id" value="${esc(l.id)}">
         <legend>
           <i class="fa-solid ${icon}"></i>
           <input type="text" name="layers.${p}.label" value="${esc(l.label)}" placeholder="${esc(t(`Workshop.Source.${l.source.type}`))}" ${dis}>
+          <span class="vw-kind">${esc(t(`Workshop.Source.${l.source.type}`))}</span>
           <label class="vw-mute" data-tooltip="${esc(t("Workshop.Mute"))}"><input type="checkbox" name="layers.${p}.mute" ${l.mute ? "checked" : ""} ${dis}><i class="fa-solid fa-volume-xmark"></i></label>
           ${tools}
+          <button type="button" class="vw-expand" data-action="expand" data-id="${esc(l.id)}" aria-expanded="${open}" aria-label="${esc(t("Workshop.Details"))}" data-tooltip="${esc(t("Workshop.Details"))}"><i class="fa-solid fa-chevron-down"></i></button>
         </legend>
+        <div class="vw-layer-body" ${open ? "" : "hidden"}>
         ${this.#sourceHtml(l, p)}
         <div class="vw-subtitle">${t("Workshop.Output")}</div>
         <div class="vw-grid">
@@ -302,6 +304,7 @@ export class Workshop extends ApplicationV2 {
         ${filters || `<p class="notes">${t("Workshop.NoFilter")}</p>`}
         <div class="vw-subtitle">${t("Workshop.ModsTitle")} ${this.editable && l.mods.length < LIMITS.mods ? `<a data-action="addMod" data-index="${i}"><i class="fa-solid fa-plus"></i></a>` : ""}</div>
         ${mods || `<p class="notes">${t("Workshop.NoMod")}</p>`}
+      </div>
       </fieldset>`;
   }
 
@@ -324,41 +327,80 @@ export class Workshop extends ApplicationV2 {
     const playing = !!this.player;
     const intensity = this.previewIntensity ?? p.fixed;
     const layers = p.layers.map((l, i) => this.#layerHtml(l, i, p.layers.length)).join("");
+    const isGM = game.user.isGM;
+
+    // Liste des sons : modèles, puis sons de l'atelier
+    const item = (id) => {
+      const q = getPatch(id);
+      const on = id === this.patchId;
+      return `<button type="button" class="vw-item ${on ? "on" : ""}" data-action="pick" data-id="${esc(id)}" aria-pressed="${on}">
+        <i class="${esc(q.icon ?? "fa-solid fa-sliders")}"></i><span>${esc(patchLabel(id))}</span>${!q.builtin && q.library ? `<span class="vw-lib" data-tooltip="${esc(t("Workshop.InLibrary"))}">●</span>` : ""}</button>`;
+    };
+    const mine = Object.keys(customPatches());
+    const nav = `
+      <nav class="vw-nav" aria-label="${esc(t("Workshop.Title"))}">
+        ${isGM ? `<button type="button" class="vw-new" data-action="newPatch"><i class="fa-solid fa-plus"></i> ${t("Workshop.New")}</button>` : ""}
+        <h3>${t("Workshop.Builtins")}</h3>${BUILTIN_IDS.map(item).join("")}
+        ${mine.length ? `<h3>${t("Workshop.Mine")}</h3>${mine.map(item).join("")}` : ""}
+      </nav>`;
 
     const banner = p.builtin
-      ? `<div class="vw-banner"><i class="fa-solid fa-lock"></i> ${t("Workshop.BuiltinNote")} ${game.user.isGM ? `<button type="button" data-action="duplicate"><i class="fa-solid fa-copy"></i> ${t("Workshop.Duplicate")}</button>` : ""}</div>`
+      ? `<div class="vw-banner"><i class="fa-solid fa-lock"></i> <span>${t("Workshop.BuiltinNote")}</span> ${isGM ? `<button type="button" data-action="duplicate"><i class="fa-solid fa-copy"></i> ${t("Workshop.Duplicate")}</button>` : ""}</div>`
       : "";
 
+    const footer =
+      !p.builtin && isGM
+        ? `<footer class="vw-savebar">
+            <span class="vw-grow">${t(p.library ? "Workshop.InLibraryHint" : "Workshop.NotInLibraryHint")}</span>
+            <button type="button" class="vw-danger" data-action="deletePatch"><i class="fa-solid fa-trash-can"></i> ${t("Workshop.Delete")}</button>
+            ${
+              p.library
+                ? `<button type="button" data-action="removeLibrary">${t("Workshop.RemoveFromLibrary")}</button>`
+                : `<button type="button" class="vw-primary" data-action="saveLibrary"><i class="fa-solid fa-book-bookmark"></i> ${t("Workshop.SaveToLibrary")}</button>`
+            }
+          </footer>`
+        : "";
+
     return `
-      <section class="vw-head">
-        <div class="vw-bar">
-          <select class="vw-pick">${patchOptions(this.patchId)}</select>
-          <button type="button" class="vw-play ${playing ? "active" : ""}" data-action="play"><i class="fa-solid ${playing ? "fa-stop" : "fa-play"}"></i> ${t(playing ? "Workshop.Stop" : "Workshop.Play")}</button>
-          ${game.user.isGM ? `<button type="button" data-action="newPatch" data-tooltip="${esc(t("Workshop.New"))}"><i class="fa-solid fa-file-circle-plus"></i></button>
-          <button type="button" data-action="duplicate" data-tooltip="${esc(t("Workshop.Duplicate"))}"><i class="fa-solid fa-copy"></i></button>
-          ${p.builtin ? "" : `<button type="button" data-action="deletePatch" data-tooltip="${esc(t("Workshop.Delete"))}"><i class="fa-solid fa-trash"></i></button>`}` : ""}
+      <div class="vw-columns">
+        ${nav}
+        <div class="vw-main">
+          <section class="vw-head">
+            <div class="vw-bar">
+              <span class="vw-title-icon"><i class="${esc(p.icon ?? "fa-solid fa-sliders")}"></i></span>
+              <div class="vw-grow">
+                ${p.builtin ? `<div class="vw-title">${esc(patchLabel(this.patchId))}</div>` : `<label class="vw-sr" for="vw-name-${this.id}">${t("Workshop.Name")}</label><input id="vw-name-${this.id}" class="vw-title-input" type="text" name="label" value="${esc(p.label)}" ${dis}>`}
+                <div class="vw-sub">${esc(t(`Workshop.Intensity.${p.intensity}`))}</div>
+              </div>
+              <button type="button" class="vw-play ${playing ? "active" : ""}" data-action="play"><i class="fa-solid ${playing ? "fa-stop" : "fa-play"}"></i> ${t(playing ? "Workshop.Stop" : "Workshop.Play")}</button>
+            </div>
+            <div class="vw-previews">
+              <label class="vw-preview"><span>${t("Workshop.PreviewIntensity")}</span><input type="range" class="vw-preview-intensity" min="0" max="1" step="0.01" value="${intensity}"><output>${Math.round(intensity * 100)} %</output></label>
+              <label class="vw-preview" data-tooltip="${esc(t("Workshop.PreviewDistanceHint"))}"><span>${t("Workshop.PreviewDistance")}</span><input type="range" class="vw-preview-distance" min="0" max="10" step="0.05" value="${this.previewDistance}"><output>${this.previewDistance.toFixed(1)} ${t("Workshop.Cells")}</output></label>
+            </div>
+            ${banner}
+            <div class="vw-grid">
+              ${this.#sel(t("Workshop.IntensitySource"), "intensity", INTENSITY_SOURCES, p.intensity, "Workshop.Intensity")}
+              ${this.#num(t("Workshop.Fixed"), "fixed", p.fixed, { min: 0, max: 1, step: 0.01, hint: t("Workshop.FixedHint") })}
+              ${this.#num(t("Workshop.Volume"), "volume", p.volume, { min: -40, max: 12, step: 0.5, unit: "dB" })}
+            </div>
+          </section>
+          <section class="vw-layers">
+            <h3 class="vw-h">${t("Workshop.Layers")}</h3>
+            ${layers || `<p class="vesper-empty">${t("Workshop.Empty")}</p>`}
+            ${
+              this.editable && p.layers.length < LIMITS.layers
+                ? `<div class="vw-foot">
+                    <button type="button" data-action="addLayer" data-type="noise"><i class="fa-solid fa-wave-square"></i> ${t("Workshop.Source.noise")}</button>
+                    <button type="button" data-action="addLayer" data-type="osc"><i class="fa-solid fa-wave-sine"></i> ${t("Workshop.Source.osc")}</button>
+                    <button type="button" data-action="addLayer" data-type="events"><i class="fa-solid fa-burst"></i> ${t("Workshop.Source.events")}</button>
+                  </div>`
+                : ""
+            }
+          </section>
+          ${footer}
         </div>
-        <label class="vw-preview"><span>${t("Workshop.PreviewIntensity")}</span><input type="range" class="vw-preview-intensity" min="0" max="1" step="0.01" value="${intensity}"><output>${Math.round(intensity * 100)} %</output></label>
-        <label class="vw-preview" data-tooltip="${esc(t("Workshop.PreviewDistanceHint"))}"><span>${t("Workshop.PreviewDistance")}</span><input type="range" class="vw-preview-distance" min="0" max="10" step="0.05" value="${this.previewDistance}"><output>${this.previewDistance.toFixed(1)} ${t("Workshop.Cells")}</output></label>
-        ${banner}
-        <div class="vw-grid">
-          <label class="vw-field"><span>${t("Workshop.Name")}</span><input type="text" name="label" value="${esc(p.builtin ? patchLabel(this.patchId) : p.label)}" ${dis}></label>
-          ${this.#sel(t("Workshop.IntensitySource"), "intensity", INTENSITY_SOURCES, p.intensity, "Workshop.Intensity")}
-          ${this.#num(t("Workshop.Fixed"), "fixed", p.fixed, { min: 0, max: 1, step: 0.01, hint: t("Workshop.FixedHint") })}
-          ${this.#num(t("Workshop.Volume"), "volume", p.volume, { min: -40, max: 12, step: 0.5, unit: "dB" })}
-        </div>
-        <p class="notes">${t("Workshop.UseHint")}</p>
-      </section>
-      <section class="vw-layers">${layers || `<p class="vesper-empty">${t("Workshop.Empty")}</p>`}</section>
-      ${
-        this.editable && p.layers.length < LIMITS.layers
-          ? `<footer class="vw-foot">
-              <button type="button" data-action="addLayer" data-type="noise"><i class="fa-solid fa-wave-square"></i> ${t("Workshop.Source.noise")}</button>
-              <button type="button" data-action="addLayer" data-type="osc"><i class="fa-solid fa-wave-sine"></i> ${t("Workshop.Source.osc")}</button>
-              <button type="button" data-action="addLayer" data-type="events"><i class="fa-solid fa-burst"></i> ${t("Workshop.Source.events")}</button>
-            </footer>`
-          : ""
-      }`;
+      </div>`;
   }
 
   /* -------------------------------------------- */
@@ -459,6 +501,7 @@ export class Workshop extends ApplicationV2 {
     const map = Object.fromEntries(Object.entries(customPatches()).map(([k, p]) => [k, { ...p, builtin: undefined, icon: undefined, id: undefined }]));
     map[id] = { ...NEW_PATCH(), label: t("Workshop.NewName") };
     this.patchId = id;
+    this.expanded = new Set(["l1"]);
     await saveCustom(JSON.parse(JSON.stringify(map)));
   }
 
@@ -471,6 +514,8 @@ export class Workshop extends ApplicationV2 {
     delete copy.icon;
     delete copy.id;
     copy.label = t("Workshop.CopyName", { name: patchLabel(this.patchId) });
+    // Une copie n'entre dans la bibliothèque que quand le MJ l'y enregistre
+    copy.library = false;
     map[id] = copy;
     this.patchId = id;
     await saveCustom(JSON.parse(JSON.stringify(map)));
@@ -549,6 +594,30 @@ export class Workshop extends ApplicationV2 {
     const i = Number(target.dataset.index);
     const k = Number(target.dataset.k);
     await this.#mutate((p) => p.layers[i]?.mods.splice(k, 1));
+  }
+
+  static #onPick(event, target) {
+    this.patchId = target.dataset.id;
+    this.previewIntensity = null;
+    this.expanded = new Set();
+    this.#restartPreview();
+    this.render();
+  }
+
+  static #onExpand(event, target) {
+    const id = target.dataset.id;
+    if (this.expanded.has(id)) this.expanded.delete(id);
+    else this.expanded.add(id);
+    this.render();
+  }
+
+  static async #onSaveLibrary() {
+    await this.#mutate((p) => (p.library = true));
+    ui.notifications.info(t("Workshop.SavedToLibrary", { name: patchLabel(this.patchId) }));
+  }
+
+  static async #onRemoveLibrary() {
+    await this.#mutate((p) => (p.library = false));
   }
 
   /** Lie un nombre à l'intensité (deux valeurs, au calme et au maximum), ou le délie. */

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0
+
+- Nouvelle interface : un seul **panneau Vesper**, ancré à droite ou détachable (glisser sa barre de titre). En haut : la tension et la carte du son. Trois onglets :
+  - **Sons** : la bibliothèque par familles ; on glisse un son sur la carte pour le poser, le crayon l'ouvre dans l'atelier ; on peut y ranger des fichiers audio.
+  - **Scène** : la liste des sources et les réglages de la source choisie (nom, son, rayon, volume, intensité, directionnel, caché…), puis les **Pièces** : lieu acoustique et isolation de chaque Région, surlignée sur la carte au survol.
+  - **Ambiance** : l'état de la scène, les couches du paysage sonore (interrupteur et voyant « joue en ce moment ») et le lieu acoustique de la scène.
+- Roue dentée du panneau : tous les réglages du module, groupés (murs, propagation, écoute).
+- Clic sur le logo d'une source : elle est sélectionnée et réglable dans le panneau ; une **poubelle rouge** apparaît à côté du logo pour la supprimer.
+- **Atelier sonore** refait : fenêtre à part, liste des sons à gauche, couches repliables ; un son créé s'ajoute au panneau avec « Enregistrer dans la bibliothèque ».
+- Une source peut porter un nom personnalisé, affiché sous son logo.
+- La palette et l'outil « Poser » disparaissent (remplacés par le glisser-déposer) ; la case Vesper garde Sélectionner, Carte du son et Atelier.
+
 ## 0.3.1
 
 - Logos des sources : dès qu'on ouvre la case Vesper, chaque source apparaît sur la carte avec un badge à l'icône de son son (flamme, vagues, insecte, note de musique pour un fichier…), sa couleur et son nom. Taille constante quel que soit le zoom ; source cachée ou rendue à Foundry : grisée.

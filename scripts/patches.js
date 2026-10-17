@@ -183,6 +183,8 @@ export function normalizePatch(p, id = null) {
     intensity: pick(p?.intensity, INTENSITY_SOURCES, "fixed"),
     fixed: num(p?.fixed, 0.5, 0, 1),
     volume: num(p?.volume, 0, -40, 12),
+    // Son de l'atelier rangé dans la bibliothèque du panneau (prêt à poser)
+    library: !!p?.library,
     layers: (Array.isArray(p?.layers) ? p.layers : []).slice(0, LIMITS.layers).map(cleanLayer)
   };
 }

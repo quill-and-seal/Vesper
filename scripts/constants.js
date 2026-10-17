@@ -30,7 +30,9 @@ export const SOUND_DEFAULTS = Object.freeze({
   // Son procédural joué à la place du fichier (identifiant d'une recette), ou null
   patch: null,
   // Intensité imposée au son procédural (0 à 1), ou null : elle suit le vent, la pluie ou la tension
-  intensity: null
+  intensity: null,
+  // Nom affiché sur la carte et dans le panneau (vide : le nom du son)
+  label: ""
 });
 
 /** Paysage sonore par défaut d'une scène. */
@@ -46,6 +48,8 @@ export const SOUNDSCAPE_DEFAULTS = Object.freeze({
 export const LAYER_DEFAULTS = Object.freeze({
   id: "",
   label: "",
+  // Couche coupée à la main par le MJ (panneau, onglet Ambiance)
+  enabled: true,
   // loop : boucle continue ; scatter : sons ponctuels dispersés ; synth : son généré (aucun fichier)
   kind: "loop",
   paths: [],

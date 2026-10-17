@@ -259,7 +259,7 @@ test("procédural : couches « seulement de près »", () => {
 });
 
 import { computeGrid, contourSegments, labelPoint, colorAt, mufflePart, combineGrids, smoothGrid, SILENT_DB } from "../scripts/field.js";
-import { soundDataFor } from "../scripts/layer.js";
+import { soundDataForEntry, libraryEntry } from "../scripts/library.js";
 
 test("champ sonore : grille, anneaux à la bonne distance", () => {
   // Source idéale : -6 dB par doublement à partir de 100 px, silence au-delà de 1000 px
@@ -308,16 +308,20 @@ test("champ sonore : couleurs, étiquettes, addition", () => {
   assert.equal(t.db[1], SILENT_DB);
 });
 
-test("palette : données du son posé", () => {
+test("bibliothèque : données du son posé", () => {
   setCustomPatches({});
-  const d = soundDataFor({ source: "patch", patch: "fire", radius: 6, volume: 0.4 }, { x: 10.4, y: 20.6 }, 1.5);
+  globalThis.game ??= { i18n: { localize: (k) => k, format: (k) => k } };
+  const fire = libraryEntry({ patch: "fire" });
+  assert.equal(fire.radius, 6);
+  const d = soundDataForEntry(fire, { x: 10.4, y: 20.6 }, 1.5);
   assert.equal(d.x, 10);
   assert.equal(d.y, 21);
   assert.equal(d.radius, 9);
   assert.match(d.path, /synth\/procedural\.wav$/);
   assert.equal(d.flags["vesper-audio"].sound.patch, "fire");
-  const f = soundDataFor({ source: "file", path: "sounds/forge.ogg", radius: 4, volume: 0.8 }, { x: 0, y: 0 }, 5);
-  assert.equal(f.path, "sounds/forge.ogg");
+  const f = soundDataForEntry(libraryEntry({ path: "sounds/forge%20du%20village.ogg" }), { x: 0, y: 0 }, 5);
+  assert.equal(f.path, "sounds/forge%20du%20village.ogg");
   assert.equal(f.flags["vesper-audio"].sound.patch, null);
-  assert.equal(f.radius, 20);
+  assert.equal(libraryEntry({ path: "sounds/forge%20du%20village.ogg" }).name, "forge du village");
+  assert.equal(libraryEntry({ patch: "inconnu" }), null);
 });

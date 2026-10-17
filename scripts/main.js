@@ -15,7 +15,8 @@ import { SYNTH_TYPES } from "./audio/synth.js";
 import { setCustomPatches, getPatch, allPatches, customPatches, normalizePatch } from "./patches.js";
 import { Workshop } from "./workshop.js";
 import { createVesperLayerClass, LAYER_NAME } from "./layer.js";
-import { Palette } from "./palette.js";
+import { VesperPanel } from "./panel.js";
+import { selection } from "./selection.js";
 
 const out = new AudioOutput();
 const spatial = new SpatialEngine(out);
@@ -23,7 +24,22 @@ const soundscape = new Soundscape(out, spatial);
 spatial.afterUpdate = () => soundscape.update();
 
 /** Moteur exposé aux fenêtres. */
-const engine = { out, spatial, soundscape };
+const engine = {
+  out,
+  spatial,
+  soundscape,
+  /** Ouvre l'atelier (sur un son précis), en réutilisant la fenêtre déjà ouverte. */
+  openWorkshop: (patchId) => {
+    const open = [...Workshop.open][0];
+    if (open) {
+      if (patchId) open.patchId = patchId;
+      return open.render({ force: true });
+    }
+    return new Workshop(engine, { patchId }).render({ force: true });
+  },
+  openSoundscape: () => new SoundscapeConfig(engine).render({ force: true }),
+  openPanel: () => VesperPanel.open(engine)
+};
 
 /** Relance tout après un changement de réglage. */
 function resync() {
@@ -87,11 +103,20 @@ Hooks.once("init", () => {
       soundscape.sync();
       for (const app of openApps) app.onSceneChanged?.();
       for (const app of Workshop.open) app.onPatchesChanged();
+      VesperPanel.instance?.refresh();
     }
   });
 
   // Outil « Poser » : son choisi dans la palette, et affichage de toutes les sources
-  game.settings.register(MODULE_ID, "placeChoice", { scope: "client", config: false, type: Object, default: {} });
+  // Panneau (ancré ou flottant, onglet ouvert) et fichiers audio de la bibliothèque
+  game.settings.register(MODULE_ID, "panel", { scope: "client", config: false, type: Object, default: {} });
+  game.settings.register(MODULE_ID, "libraryFiles", {
+    scope: "world",
+    config: false,
+    type: Array,
+    default: [],
+    onChange: () => VesperPanel.instance?.refresh()
+  });
   game.settings.register(MODULE_ID, "showAll", {
     scope: "client",
     config: false,
@@ -119,8 +144,11 @@ Hooks.once("init", () => {
     setSoundscape: (changes, scene) => writeSoundscape(changes, scene),
     getTension: (scene) => readSoundscape(scene).tension,
     setTension: (level, scene) => writeSoundscape({ tension: Math.max(0, Math.min(3, Number(level) || 0)) }, scene),
-    openSoundscape: () => new SoundscapeConfig(engine).render({ force: true }),
-    openWorkshop: (patchId) => new Workshop(engine, { patchId }).render({ force: true }),
+    openSoundscape: () => engine.openSoundscape(),
+    openWorkshop: (patchId) => engine.openWorkshop(patchId),
+    openPanel: () => engine.openPanel(),
+    /** Source sélectionnée sur la carte (id d'un son d'ambiance). */
+    select: (id) => selection.set(id),
     /** Sons procéduraux : modèles livrés et sons de l'atelier. */
     getPatch,
     allPatches,
@@ -166,39 +194,24 @@ Hooks.once("ready", () => {
 
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!game.user.isGM) return;
-  const button = (fn) => ({ button: true, onChange: fn });
   const tools = {
     select: { name: "select", title: "VESPER.Controls.Select", icon: "fa-solid fa-arrow-pointer", order: 0 },
-    place: { name: "place", title: "VESPER.Controls.Place", icon: "fa-solid fa-location-dot", order: 1 },
-    palette: {
-      name: "palette",
-      title: "VESPER.Controls.Palette",
-      icon: "fa-solid fa-palette",
-      order: 2,
-      ...button(() => new Palette().render({ force: true }))
-    },
     showAll: {
       name: "showAll",
       title: "VESPER.Controls.ShowAll",
-      icon: "fa-solid fa-layer-group",
-      order: 3,
+      icon: "fa-solid fa-bullseye",
+      order: 1,
       toggle: true,
       active: !!game.settings.get(MODULE_ID, "showAll"),
       onChange: (event, active) => game.settings.set(MODULE_ID, "showAll", typeof active === "boolean" ? active : !game.settings.get(MODULE_ID, "showAll"))
-    },
-    soundscape: {
-      name: "soundscape",
-      title: "VESPER.Controls.Soundscape",
-      icon: "fa-solid fa-tree",
-      order: 4,
-      ...button(() => new SoundscapeConfig(engine).render({ force: true }))
     },
     workshop: {
       name: "workshop",
       title: "VESPER.Controls.Workshop",
       icon: "fa-solid fa-flask",
-      order: 5,
-      ...button(() => new Workshop(engine).render({ force: true }))
+      order: 2,
+      button: true,
+      onChange: () => engine.openWorkshop()
     }
   };
   // Sa propre case dans la barre de gauche, à côté des Sons de Foundry
@@ -216,11 +229,39 @@ Hooks.on("getSceneControlButtons", (controls) => {
   else controls.vesper = { ...control, tools };
 });
 
+/** Case active dans la barre de gauche. */
+function activeControl() {
+  const c = ui.controls?.control;
+  return typeof c === "string" ? c : c?.name ?? ui.controls?.activeControl ?? null;
+}
+
+// Ouvrir la case Vesper ouvre le panneau ; en sortir le ferme
+Hooks.on("renderSceneControls", () => {
+  canvas.vesper?.refreshMarkers?.();
+  if (!game.user.isGM) return;
+  if (activeControl() === LAYER_NAME) {
+    if (!VesperPanel.instance?.rendered) engine.openPanel();
+  } else if (VesperPanel.instance?.rendered) {
+    VesperPanel.close();
+    selection.set(null);
+  }
+});
+
+// Un son glissé depuis la bibliothèque du panneau et lâché sur la carte
+Hooks.on("dropCanvasData", (cnv, data, event) => {
+  if (data?.type !== "VesperSound") return;
+  canvas.vesper?.setDropHint?.(false);
+  if (!game.user.isGM) return false;
+  canvas.vesper?.place?.({ patch: data.patch, path: data.path }, { x: data.x, y: data.y }, { snap: !!event?.shiftKey });
+  return false;
+});
+
 /** Le calque de Vesper redessine ses repères et ses cartes (sons, murs ou Régions changés). */
 let layerTimer = null;
 function refreshLayer({ markers = true } = {}) {
   clearTimeout(layerTimer);
   layerTimer = setTimeout(() => {
+    VesperPanel.instance?.refresh();
     const layer = canvas.vesper;
     if (!layer) return;
     if (markers) layer.refreshMarkers?.();
@@ -258,6 +299,7 @@ Hooks.on("canvasReady", () => {
 });
 
 Hooks.on("canvasTearDown", () => {
+  selection.set(null);
   spatial.clear();
   soundscape.clear();
 });
@@ -294,6 +336,7 @@ for (const hook of ["createRegion", "updateRegion", "deleteRegion", "createRegio
 for (const hook of ["createAmbientSound", "updateAmbientSound", "deleteAmbientSound"]) {
   Hooks.on(hook, (doc) => {
     if (doc.parent?.id !== canvas.scene?.id) return;
+    if (hook === "deleteAmbientSound" && selection.id === doc.id) selection.set(null);
     spatial.refreshSounds();
     refreshLayer();
   });
@@ -308,6 +351,7 @@ Hooks.on("updateScene", (scene, changes) => {
   }
   if (foundry.utils.hasProperty(changes, "grid")) spatial.sync();
   refreshApps();
+  VesperPanel.instance?.refresh();
 });
 
 // Combat : les couches « en combat » entrent sans attendre

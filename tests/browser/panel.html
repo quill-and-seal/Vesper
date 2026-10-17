@@ -1,0 +1,139 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vesper — panneau (banc d'essai)</title>
+<link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+<link rel="stylesheet" href="/styles/vesper.css">
+<style>
+  /* Le strict minimum de Foundry : fond, police, boutons, fenêtres */
+  body { margin: 0; background: #222; font-family: Signika, "Segoe UI", sans-serif; color: #ece6da; font-size: 14px; overflow: hidden; }
+  button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
+  button { background: #2c2925; border: 1px solid #3d3832; border-radius: 6px; cursor: pointer; }
+  input, select { background: #15120e; border: 1px solid #3a352f; border-radius: 6px; padding: 0 6px; }
+  .application { display: flex; flex-direction: column; background: #1f1c19; border: 1px solid #4a443d; box-shadow: 0 10px 40px rgba(0,0,0,.6); z-index: 20; }
+  .application .window-header { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px 0 12px; background: #262320; border-bottom: 1px solid #34302b; }
+  .application .window-title { font-size: 15px; margin: 0; font-weight: 600; }
+  .application .window-content { flex: 1; min-height: 0; overflow: auto; }
+  .vesper-workshop .window-content { color: #ece6da; }
+  fieldset { border: 1px solid #3a352f; border-radius: 8px; padding: 8px; }
+  #sidebar { position: fixed; right: 0; top: 0; width: 300px; height: 100%; background: #16140f; border-left: 1px solid #333; }
+  .fa-solid.preload { position: absolute; opacity: 0; }
+</style>
+<i class="fa-solid fa-fire preload"></i>
+<div id="sidebar"></div>
+<script src="/node_modules/pixi.js/dist/pixi.min.js"></script>
+<script src="./stub.js"></script>
+<script type="module">
+  const params = new URLSearchParams(location.search);
+  const step = params.get("step") ?? "sons";
+  await document.fonts.ready;
+  const fr = await (await fetch("/lang/fr.json")).json();
+  game.i18n.localize = (k) => k.split(".").reduce((o, p) => o?.[p], fr) ?? k;
+  game.i18n.format = (k, d) => game.i18n.localize(k).replace(/\{(\w+)\}/g, (m, n) => d?.[n] ?? m);
+
+  foundry.canvas.layers.InteractionLayer = class extends PIXI.Container {
+    static get layerOptions() { return {}; }
+    async draw() { await this._draw?.({}); return this; }
+    activate() { this._activate?.(); return this; }
+  };
+  foundry.utils.mergeObject = (a, b) => ({ ...a, ...b });
+  const app = new PIXI.Application({ width: window.innerWidth - 300, height: window.innerHeight, background: 0x4a4236, antialias: true });
+  app.view.style.position = "fixed"; app.view.style.left = "0"; app.view.style.top = "0";
+  document.body.prepend(app.view);
+  canvas.app = app;
+  canvas.stage = app.stage;
+  canvas.stage.scale.set(0.55);
+  canvas.stage.position.set(40, 30);
+  canvas.canvasCoordinatesFromClient = ({ x, y }) => canvas.stage.toLocal(new PIXI.Point(x, y));
+  canvas.dimensions.sceneRect = { x: 0, y: 0, width: 2000, height: 1500 };
+  globalThis.ui.controls = { control: "vesper", tool: "select" };
+
+  await import("/scripts/main.js");
+  await Hooks.call("init");
+  await Hooks.call("setup");
+  await Hooks.call("ready");
+  await Hooks.call("canvasReady");
+  const api = game.modules.get("vesper-audio").api;
+  const { spatial } = api.engine;
+
+  // Décor : une taverne (murs + porte) et une clairière
+  for (const w of [[200,300,1000,300],[200,300,200,1100],[200,1100,1000,1100],[1000,300,1000,640],[1000,760,1000,1100]]) T.wall(...w);
+  T.wall(1000, 640, 1000, 760, { door: 1, ds: 1 });
+  T.region(200, 300, 1000, 1100, { name: "Taverne du Gué", place: "tavern", wet: null, isolation: 0.8 });
+  T.region(1150, 150, 1850, 650, null).name = "Bords du ruisseau";
+  T.makeSound("s1", 550, 700, { radius: 15, path: "modules/vesper-audio/synth/procedural.wav", flags: { "vesper-audio": { sound: { patch: "fire" } } } });
+  T.makeSound("s2", 1500, 400, { radius: 10, path: "modules/vesper-audio/synth/river.wav" });
+  T.makeSound("s3", 450, 950, { radius: 8, path: "sounds/taverne%20brouhaha.ogg" });
+  T.makeSound("s4", 1550, 1150, { radius: 6, path: "modules/vesper-audio/synth/procedural.wav", hidden: true, flags: { "vesper-audio": { sound: { patch: "crickets" } } } });
+  await api.setSoundscape({ tension: 1, layers: [
+    { id: "a1", label: "Grillons", kind: "synth", synth: "crickets", when: { time: "night" } },
+    { id: "a2", label: "Vent léger", kind: "synth", synth: "wind" },
+    { id: "a3", label: "Malaise", kind: "synth", synth: "drone", when: { tensionMin: 2 } },
+    { id: "a4", label: "Cœur", kind: "synth", synth: "heartbeat", enabled: false, when: { tensionMin: 3 } }
+  ] });
+  await api.savePatch("my-forge", { label: "Forge", library: true, layers: [{ source: { type: "noise", color: "pink" }, filters: [{ type: "lowpass", freq: 900 }], gain: 0.4 }] });
+  await game.settings.set("vesper-audio", "libraryFiles", [{ id: "f1", path: "sounds/taverne%20brouhaha.ogg", name: "taverne brouhaha" }]);
+  spatial.sync();
+
+  const Layer = CONFIG.Canvas.layers.vesper.layerClass;
+  const layer = new Layer();
+  canvas.vesper = layer;
+  app.stage.addChild(layer);
+  await layer.draw();
+  layer.activate();
+  await Hooks.call("renderSceneControls");   // ouvre le panneau
+  await new Promise((r) => setTimeout(r, 50));
+  const panel = (await import("/scripts/panel.js")).VesperPanel.instance;
+  const click = async (sel, root = panel.element) => {
+    const el = root.querySelector(sel);
+    if (!el) throw new Error("introuvable : " + sel);
+    el.click();
+    await new Promise((r) => setTimeout(r, 60));
+  };
+  const out = { docked: panel.docked, position: { ...panel.position } };
+
+  if (step === "scene" || step === "trash") {
+    // Clic réel sur le logo du feu
+    const p = app.stage.toGlobal(new PIXI.Point(550, 700));
+    app.view.dispatchEvent(new PointerEvent("pointerdown", { clientX: p.x, clientY: p.y, button: 0, bubbles: true }));
+    app.view.dispatchEvent(new PointerEvent("pointerup", { clientX: p.x, clientY: p.y, button: 0, bubbles: true }));
+    await new Promise((r) => setTimeout(r, 80));
+    out.tab = panel.tab;
+    out.selected = api.engine && (await import("/scripts/selection.js")).selection.id;
+    out.trashVisible = layer.trash.visible;
+    // Survol de la taverne dans la liste des pièces
+    panel.element.querySelector('[data-region="r0"]')?.dispatchEvent(new MouseEvent("mouseenter"));
+    out.roomHighlight = layer.room.children.length;
+    if (step === "trash") {
+      const q = app.stage.toGlobal(new PIXI.Point(550 + 22 / 0.55, 700 - 22 / 0.55));
+      app.view.dispatchEvent(new PointerEvent("pointerdown", { clientX: q.x, clientY: q.y, button: 0, bubbles: true }));
+      app.view.dispatchEvent(new PointerEvent("pointerup", { clientX: q.x, clientY: q.y, button: 0, bubbles: true }));
+      await new Promise((r) => setTimeout(r, 80));
+      out.afterTrash = T.scene.sounds.map((d) => d.id);
+    }
+  }
+  out.cards = [...panel.element.querySelectorAll(".vp-h")].map((h) => h.textContent + ": " + [...h.parentElement.querySelectorAll("[draggable=true]")].length);
+  if (step === "ambiance") await click('[data-tab="ambiance"]');
+  if (step === "settings") await click('[data-action="settings"]', panel.element);
+  if (step === "drop") {
+    // Dépôt d'un son de la bibliothèque sur la carte (hook de Foundry)
+    await Hooks.call("dropCanvasData", canvas, { type: "VesperSound", patch: "torch", x: 1300, y: 900 }, {});
+    await new Promise((r) => setTimeout(r, 80));
+    out.created = T.scene.sounds.map((d) => [d.id, d.flags?.["vesper-audio"]?.sound?.patch ?? d.path]);
+  }
+  if (step === "workshop") {
+    await api.openWorkshop("fire");
+    await new Promise((r) => setTimeout(r, 80));
+    const ws = [...(await import("/scripts/workshop.js")).Workshop.open][0];
+    ws.setPosition({ left: 230, top: 60 });
+    await click('[data-action="expand"]', ws.element);
+    out.workshopItems = ws.element.querySelectorAll(".vw-item").length;
+    out.expanded = ws.element.querySelectorAll(".vw-layer-body:not([hidden])").length;
+  }
+  if (step === "float") {
+    await click('[data-action="dock"]');
+    out.dockedAfter = panel.docked;
+    out.floatPos = { ...panel.position };
+  }
+  app.render();
+  window.__done = { ok: true, ...out };
+</script>

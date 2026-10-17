@@ -157,7 +157,7 @@ export class Soundscape {
 
     for (const rt of this.layers.values()) {
       const l = rt.layer;
-      const active = enabled && conditionsMatch(l.when, state);
+      const active = enabled && l.enabled !== false && conditionsMatch(l.when, state);
       const fade = Math.max(0.1, Number(l.fade) || 0);
 
       // Étouffement des couches extérieures quand on est à l'intérieur

@@ -3,9 +3,10 @@
  *
  * Outils de la case Vesper :
  *   - « Sélectionner » : survol d'une source = carte de son champ sonore ; glisser = déplacer
- *     (la carte suit en direct) ; clic ou clic droit = ouvrir ses réglages ;
- *   - « Poser » : clic sur la scène = poser le son choisi dans la palette (Maj : au centre de la case) ;
- *   - « Tout afficher » : la carte de toutes les sources de la scène à la fois.
+ *     (la carte suit en direct) ; clic = la sélectionner (ses réglages s'ouvrent dans le panneau,
+ *     une corbeille apparaît à côté du logo) ; clic droit = fenêtre de Foundry ;
+ *   - « Carte du son » : le champ de toutes les sources de la scène à la fois.
+ * Les sons se posent en les glissant depuis la bibliothèque du panneau.
  *
  * La carte : dégradé chaud là où le son arrive direct, froid là où il arrive étouffé par un mur ;
  * anneaux à -6, -12, -24 et -36 dB. Calculée avec le moteur du jeu, elle montre exactement ce que Vesper joue.
@@ -16,13 +17,15 @@
 
 import { MODULE_ID, setting, t } from "./constants.js";
 import { RINGS, contourSegments, labelPoint, paintPixels, combineGrids, smoothGrid, SILENT_DB } from "./field.js";
-import { soundPatch, isManaged } from "./spatial-engine.js";
-import { PROCEDURAL_PATH } from "./audio/synth.js";
+import { soundPatch, isManaged, soundSettings } from "./spatial-engine.js";
+import { selection } from "./selection.js";
+import { libraryEntry, soundDataForEntry } from "./library.js";
 import { getPatch } from "./patches.js";
 
 export const LAYER_NAME = "vesper";
 
 const BADGE_PX = 18;
+const TRASH_PX = 14;
 const CLICK_TOLERANCE = 6;
 const COLOR_PATCH = 0xf2a23c;
 const COLOR_FILE = 0xe8e2d4;
@@ -39,30 +42,6 @@ function activeControlName() {
   const control = ui.controls?.control;
   if (typeof control === "string") return control;
   return control?.name ?? ui.controls?.activeControl ?? null;
-}
-
-/** Ce qu'il faut poser (palette). */
-export function placeChoice() {
-  return { source: "patch", patch: "fire", path: "", radius: 6, volume: 0.5, ...(setting("placeChoice", {}) ?? {}) };
-}
-
-/**
- * Données d'un son d'ambiance de Foundry à partir du choix de la palette.
- * @param {{x:number, y:number}} point
- */
-export function soundDataFor(choice, point, distancePerCell) {
-  const patch = choice.source === "patch" && getPatch(choice.patch) ? choice.patch : null;
-  return {
-    x: Math.round(point.x),
-    y: Math.round(point.y),
-    radius: Math.max(0.5, Number(choice.radius) || 6) * distancePerCell,
-    path: patch ? PROCEDURAL_PATH : choice.path,
-    volume: Math.min(1, Math.max(0, Number(choice.volume) ?? 0.5)),
-    repeat: true,
-    easing: true,
-    walls: true,
-    flags: { [MODULE_ID]: { sound: { patch } } }
-  };
 }
 
 /** Codes des icônes Font Awesome utilisées par les sons (police chargée par Foundry). */
@@ -99,8 +78,8 @@ export function markerInfo(doc) {
   if (id) {
     const p = getPatch(id);
     const cls = String(p?.icon ?? "").split(" ").find((c) => GLYPHS[c]) ?? "fa-sliders";
-    const label = doc.name || (p?.builtin ? game.i18n.localize(`VESPER.Synth.${id}`) : p?.label || id);
-    return { glyph: GLYPHS[cls], color: COLORS[id] ?? COLOR_PATCH, label };
+    const label = customLabel(doc) || (p?.builtin ? game.i18n.localize(`VESPER.Synth.${id}`) : p?.label || id);
+    return { glyph: GLYPHS[cls], iconClass: `fa-solid ${cls}`, color: COLORS[id] ?? COLOR_PATCH, label };
   }
   const file = String(doc.path ?? "").split("/").pop() || "—";
   let name = file.replace(/\.[a-z0-9]+$/i, "");
@@ -109,7 +88,16 @@ export function markerInfo(doc) {
   } catch {
     /* nom laissé tel quel */
   }
-  return { glyph: GLYPHS["fa-music"], color: COLOR_FILE, label: doc.name || name };
+  return { glyph: GLYPHS["fa-music"], iconClass: "fa-solid fa-music", color: COLOR_FILE, label: customLabel(doc) || name };
+}
+
+/** Nom donné à la source par le MJ (panneau), s'il y en a un. */
+function customLabel(doc) {
+  try {
+    return String(soundSettings(doc).label ?? "").trim();
+  } catch {
+    return "";
+  }
 }
 
 /** Icône de secours dessinée (haut-parleur et ondes), si la police d'icônes n'est pas chargée. */
@@ -145,6 +133,8 @@ export function createVesperLayerClass({ engine }) {
     markers = null;
     single = null;
     all = null;
+    room = null;
+    trash = null;
 
     #view = null;
     #press = null;
@@ -152,6 +142,8 @@ export function createVesperLayerClass({ engine }) {
     #hover = null;
     #frame = null;
     #allTimer = null;
+    #offSelection = null;
+    #dropHint = null;
 
     static get layerOptions() {
       return foundry.utils.mergeObject(super.layerOptions, { name: LAYER_NAME, zIndex: 880 });
@@ -165,8 +157,12 @@ export function createVesperLayerClass({ engine }) {
       await super._draw?.(options);
       this.all = this.addChild(this.#makeFieldContainer());
       this.single = this.addChild(this.#makeFieldContainer());
+      this.room = this.addChild(new PIXI.Container());
       this.markers = this.addChild(new PIXI.Container());
       this.markers.visible = false;
+      this.trash = this.addChild(new PIXI.Container());
+      this.trash.visible = false;
+      this.#offSelection = selection.on(() => this.refreshMarkers());
       const view = canvas.app?.view ?? canvas.app?.canvas;
       if (view?.addEventListener) {
         this.#view = view;
@@ -187,6 +183,8 @@ export function createVesperLayerClass({ engine }) {
       view?.removeEventListener("contextmenu", this.#onContext);
       view?.removeEventListener("pointerleave", this.#onLeave);
       this.#view = null;
+      this.#offSelection?.();
+      this.setDropHint(false);
       this.#press = this.#drag = this.#hover = null;
       clearTimeout(this.#allTimer);
       for (const c of [this.single, this.all]) this.#clearField(c);
@@ -223,15 +221,104 @@ export function createVesperLayerClass({ engine }) {
       for (const c of this.markers.removeChildren()) c.destroy({ children: true });
       // Visibles dès que la case Vesper est ouverte, pour le MJ
       this.markers.visible = this.#active();
+      this.#drawTrash();
       if (!this.markers.visible) return;
       const zoom = this.#zoom();
       for (const doc of canvas.scene?.sounds ?? []) this.markers.addChild(this.#marker(doc, zoom));
     }
 
+    /** Corbeille ronde en haut à droite du logo sélectionné : un clic supprime la source. */
+    #drawTrash() {
+      if (!this.trash) return;
+      for (const c of this.trash.removeChildren()) c.destroy({ children: true });
+      const doc = selection.id ? canvas.scene?.sounds?.get(selection.id) : null;
+      this.trash.visible = !!doc && this.#active() && !this.#drag;
+      if (!this.trash.visible) return;
+      const zoom = this.#zoom();
+      const pos = this.#trashPoint(doc);
+      this.trash.position.set(pos.x, pos.y);
+      this.trash.scale.set(1 / zoom);
+      const g = this.trash.addChild(new PIXI.Graphics());
+      g.lineStyle(2, 0x15120e, 1).beginFill(0xc0392b, 1).drawCircle(0, 0, TRASH_PX).endFill();
+      const glyph = iconGlyph("\uf2ed", TRASH_PX * 1.05, 0xffffff);
+      if (glyph) this.trash.addChild(glyph);
+      else {
+        // Corbeille dessinée
+        const d = this.trash.addChild(new PIXI.Graphics());
+        const r = TRASH_PX * 0.5;
+        d.lineStyle(2, 0xffffff, 1).moveTo(-r, -r * 0.55).lineTo(r, -r * 0.55).moveTo(-r * 0.3, -r * 0.55).lineTo(-r * 0.3, -r * 0.9).lineTo(r * 0.3, -r * 0.9).lineTo(r * 0.3, -r * 0.55);
+        d.moveTo(-r * 0.75, -r * 0.4).lineTo(-r * 0.6, r).lineTo(r * 0.6, r).lineTo(r * 0.75, -r * 0.4);
+      }
+    }
+
+    /** Position de la corbeille (scène) pour un son. */
+    #trashPoint(doc) {
+      const zoom = this.#zoom();
+      return { x: doc.x + (BADGE_PX + 4) / zoom, y: doc.y - (BADGE_PX + 4) / zoom };
+    }
+
+    /** Le point (scène) est-il sur la corbeille ? */
+    #onTrash(point) {
+      const doc = selection.id ? canvas.scene?.sounds?.get(selection.id) : null;
+      if (!doc || !this.trash?.visible) return false;
+      const p = this.#trashPoint(doc);
+      return Math.hypot(point.x - p.x, point.y - p.y) <= (TRASH_PX + 3) / this.#zoom();
+    }
+
+    /** Contour d'une pièce (Région) survolée dans le panneau. */
+    highlightRegion(id) {
+      if (!this.room) return;
+      for (const c of this.room.removeChildren()) c.destroy({ children: true });
+      const region = id ? canvas.scene?.regions?.get(id) : null;
+      if (!region) return;
+      const zoom = this.#zoom();
+      const g = this.room.addChild(new PIXI.Graphics());
+      const polys = region.polygons ?? region.object?.polygons ?? [];
+      let top = null;
+      for (const poly of polys) {
+        const pts = poly?.points;
+        if (!pts || pts.length < 6) continue;
+        g.beginFill(0xf2a23c, 0.1).lineStyle(3 / zoom, 0xf2a23c, 0.95).drawPolygon(pts).endFill();
+        for (let i = 0; i < pts.length; i += 2) if (!top || pts[i + 1] < top[1] || (pts[i + 1] === top[1] && pts[i] < top[0])) top = [pts[i], pts[i + 1]];
+      }
+      if (!top) return;
+      const label = new PIXI.Text(region.name || "", { fontFamily: "Signika, sans-serif", fontSize: 13, fontWeight: "600", fill: 0x15120e });
+      const pad = 6;
+      const bg = new PIXI.Graphics().beginFill(0xf2a23c, 1).drawRoundedRect(-pad, -3, label.width + pad * 2, label.height + 6, (label.height + 6) / 2).endFill();
+      const tag = new PIXI.Container();
+      tag.addChild(bg, label);
+      tag.scale.set(1 / zoom);
+      tag.position.set(top[0], top[1] - (label.height + 12) / zoom);
+      this.room.addChild(tag);
+    }
+
+    /** Affiche le champ d'une source (bouton « Voir son champ » du panneau). */
+    showField(id) {
+      this.#hover = null;
+      this.#setHover(id);
+    }
+
+    /** Cadre en pointillés sur la carte pendant qu'on glisse un son depuis le panneau. */
+    setDropHint(on) {
+      if (!on) {
+        this.#dropHint?.remove();
+        this.#dropHint = null;
+        return;
+      }
+      if (this.#dropHint || !this.#view) return;
+      const r = this.#view.getBoundingClientRect();
+      const el = document.createElement("div");
+      el.className = "vesper-drop-hint";
+      el.style.cssText = `left:${r.left + 12}px;top:${r.top + 12}px;width:${r.width - 24}px;height:${r.height - 24}px`;
+      el.innerHTML = `<span>${t("Panel.DropHint")}</span>`;
+      document.body.append(el);
+      this.#dropHint = el;
+    }
+
     /** Logo d'une source : badge rond, icône du son, nom en dessous. Taille constante à l'écran. */
     #marker(doc, zoom) {
       const info = markerInfo(doc);
-      const hovered = doc.id === this.#hover;
+      const hovered = doc.id === this.#hover || doc.id === selection.id;
       const off = doc.hidden || !doc.path;
       const m = new PIXI.Container();
       m.soundId = doc.id;
@@ -415,6 +502,10 @@ export function createVesperLayerClass({ engine }) {
       if ((event.button !== 0 && event.button !== 2) || !this.#active()) return;
       const point = this.#toScene(event.clientX, event.clientY);
       if (!point) return;
+      if (event.button === 0 && this.#onTrash(point)) {
+        this.#press = { x: event.clientX, y: event.clientY, point, trash: true, button: 0 };
+        return;
+      }
       this.#press = { x: event.clientX, y: event.clientY, point, id: this.#hit(point), button: event.button, tool: activeToolName() };
     };
 
@@ -427,6 +518,7 @@ export function createVesperLayerClass({ engine }) {
         if (!this.#drag && Math.hypot(event.clientX - press.x, event.clientY - press.y) > CLICK_TOLERANCE) {
           this.#drag = { id: press.id, point };
           this.#hover = press.id;
+          if (this.trash) this.trash.visible = false;
         }
         if (this.#drag) {
           this.#drag.point = point;
@@ -461,21 +553,30 @@ export function createVesperLayerClass({ engine }) {
       const point = this.#toScene(event.clientX, event.clientY);
       const moved = Math.hypot(event.clientX - press.x, event.clientY - press.y) > CLICK_TOLERANCE;
 
+      if (press.trash) {
+        if (!moved && point && this.#onTrash(point)) {
+          const doc = canvas.scene?.sounds?.get(selection.id);
+          selection.set(null);
+          this.#setHover(null);
+          await doc?.delete();
+        }
+        return;
+      }
+
       if (drag) {
         const doc = canvas.scene?.sounds?.get(drag.id);
         let { x, y } = point;
         if (event.shiftKey) ({ x, y } = this.#snap({ x, y }));
         await doc?.update({ x: Math.round(x), y: Math.round(y) });
+        selection.set(drag.id);
         this.refreshHover();
+        this.refreshMarkers();
         return;
       }
       if (moved || press.button !== 0) return;
 
-      if (press.id) {
-        canvas.scene.sounds.get(press.id)?.sheet?.render(true);
-        return;
-      }
-      if (press.tool === "place") await this.place(event.shiftKey ? this.#snap(point) : point);
+      // Clic sur un logo : on le sélectionne (ses réglages s'ouvrent dans le panneau) ; ailleurs : on désélectionne
+      selection.set(press.id ?? null);
     };
 
     #onContext = (event) => {
@@ -499,16 +600,20 @@ export function createVesperLayerClass({ engine }) {
       }
     }
 
-    /** Pose le son choisi dans la palette. */
-    async place(point) {
-      const choice = placeChoice();
-      if (choice.source === "file" && !choice.path) {
-        ui.notifications.warn(t("Palette.NoFile"));
-        return null;
+    /**
+     * Pose un son de la bibliothèque (déposé depuis le panneau) et le sélectionne.
+     * @param {{patch?:string, path?:string}} ref
+     */
+    async place(ref, point, { snap = false } = {}) {
+      const entry = libraryEntry(ref);
+      if (!entry) return null;
+      const at = snap ? this.#snap(point) : point;
+      const [doc] = await canvas.scene.createEmbeddedDocuments("AmbientSound", [soundDataForEntry(entry, at, canvas.dimensions.distance)]);
+      if (doc) {
+        selection.set(doc.id);
+        this.#hover = null;
+        this.#setHover(doc.id);
       }
-      const data = soundDataFor(choice, point, canvas.dimensions.distance);
-      const [doc] = await canvas.scene.createEmbeddedDocuments("AmbientSound", [data]);
-      if (doc) this.#setHover(doc.id);
       return doc;
     }
   };

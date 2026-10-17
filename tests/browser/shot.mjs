@@ -18,7 +18,7 @@ const server = createServer(async (req, res) => {
   } catch { res.writeHead(404).end(); }
 }).listen(0);
 const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ["--no-proxy-server", "--autoplay-policy=no-user-gesture-required"] });
-const page = await browser.newPage({ viewport: { width: 960, height: 640 } });
+const page = await browser.newPage({ viewport: { width: Number(process.env.W ?? 960), height: Number(process.env.H ?? 640) } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
 await page.goto(`http://localhost:${server.address().port}/tests/browser/${pageUrl}`);

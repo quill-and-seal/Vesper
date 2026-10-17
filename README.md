@@ -2,7 +2,7 @@
 
 Son immersif pour **Foundry VTT v14**. Chaque joueur entend la scène **depuis son token** : les sons viennent de la bonne direction, faiblissent avec la distance comme dans la réalité, deviennent sourds derrière un mur, résonnent dans une caverne, et l'ambiance évolue toute seule avec le jour, la météo, le combat et la tension.
 
-Aucun nouvel outil de placement : Vesper reprend les **sons d'ambiance que tu poses déjà** avec les outils de Foundry. Aucune dépendance, aucun fichier à télécharger : les réverbérations sont calculées à la volée, et un **moteur de sons procéduraux** fabrique feu, vent, pluie, rivière, grillons… sans aucun enregistrement. Un **atelier sonore** permet de créer ses propres sons de la même façon.
+Vesper joue les **sons d'ambiance de Foundry** : ceux que tu poses déjà, et ceux que tu glisses sur la carte depuis son panneau. Aucune dépendance, aucun fichier à télécharger : les réverbérations sont calculées à la volée, et un **moteur de sons procéduraux** fabrique feu, vent, pluie, rivière, grillons… sans aucun enregistrement. Un **atelier sonore** permet de créer ses propres sons de la même façon.
 
 Un module de l'atelier [Quill & Seal](https://github.com/quill-and-seal).
 
@@ -35,15 +35,15 @@ Dans la fenêtre d'un son, une section **Vesper** ajoute :
 | Son directionnel | Décoché, le son est une nappe sans direction (une pluie sur toute la zone). |
 | Taille de la source | Une rivière, une foule, une cascade sont « grandes » : elles faiblissent moins vite près de la source et sonnent plus large. |
 
-### Poser et voir le son
+### Le panneau Vesper
 
-La case **Vesper** (icône d'oreille, dans la barre de gauche) a ses propres outils :
+Clique sur la case **Vesper** (icône d'oreille, dans la barre de gauche) : le **panneau Vesper** s'ouvre, ancré à droite à côté de la barre latérale. Glisse sa barre de titre pour le détacher et le poser où tu veux ; le bouton à côté de la roue dentée le ré-ancre. En haut, toujours visibles : la **tension** et l'interrupteur **Carte du son** (le champ de toutes les sources). La roue dentée ouvre les réglages du module.
 
-- **Palette** : choisis le son à poser (feu, rivière, grillons, un son de l'atelier ou un fichier audio), son rayon et son volume.
-- **Poser** : clique sur la scène pour poser le son choisi (Maj : au centre de la case). C'est un vrai son d'ambiance de Foundry, réglable comme les autres.
-- Dès que la case est ouverte, **chaque source apparaît avec un logo** : l'icône de son son, sa couleur et son nom (grisé si elle est cachée).
-- **Sélectionner** : survole le logo d'une source pour voir **comment son son se répand**. Clic ou clic droit : ses réglages. Glisser : la déplacer, la carte suit en direct.
-- **Tout afficher** : la carte de toutes les sources de la scène, pour repérer les zones silencieuses ou trop chargées.
+- **Sons** : ta bibliothèque, rangée par familles (feu, eau, nature, tension, tes sons, tes fichiers). **Glisse un son sur la carte** pour le poser (Maj : au centre de la case). Le crayon ouvre le son dans l'atelier. « + Ajouter un fichier audio » range un enregistrement dans la bibliothèque.
+- **Scène** : la liste des sources posées. **Clique sur un logo de la carte** (ou une ligne de la liste) : ses réglages s'affichent dans le panneau (nom, son, rayon en cases, volume, intensité, directionnel, caché, joué par Vesper), et une **poubelle rouge** apparaît à côté du logo pour la supprimer. Plus bas, **Pièces** : le lieu acoustique et l'isolation de chaque Région ; survole une pièce pour la voir sur la carte.
+- **Ambiance** : l'état de la scène (jour, météo, combat), les couches du paysage sonore avec leur interrupteur et un voyant vert quand elles jouent, et le lieu acoustique de la scène.
+
+Sur la carte, dès que la case est ouverte, **chaque source apparaît avec un logo** : l'icône de son son, sa couleur et son nom (grisé si elle est cachée). Survole un logo pour voir **comment son son se répand** ; glisse-le pour déplacer la source, la carte suit en direct. Clic droit : la fenêtre de Foundry du son.
 
 La carte montre exactement ce que Vesper joue, calculée avec le même moteur :
 
@@ -68,7 +68,7 @@ La réverbération est celle du lieu où se tient le token, avec un fondu quand 
 
 ## 3. Le paysage sonore (ambiances dynamiques)
 
-Dans la barre de gauche, la case **Vesper** (icône d'oreille) → **Paysage sonore**. Une scène a des **couches** qui entrent et sortent en fondu selon leurs conditions :
+Panneau Vesper → onglet **Ambiance** (bouton « Modifier les couches… » pour la fenêtre complète). Une scène a des **couches** qui entrent et sortent en fondu selon leurs conditions :
 
 - **Boucle** : un fichier en boucle (foule, rivière lointaine, vent).
 - **Sons dispersés** : des sons ponctuels à intervalles irréguliers, à gauche, à droite, près ou loin, avec une légère variation de hauteur (oiseaux, craquements, tonnerre). Le calendrier dépend de l'heure du serveur : **tous les joueurs entendent le même coup de tonnerre au même moment**, du même côté.
@@ -76,7 +76,7 @@ Dans la barre de gauche, la case **Vesper** (icône d'oreille) → **Paysage son
 
 Conditions d'une couche : **jour / nuit** (obscurité de la scène), **combat**, **météo** (lue dans [Ember](https://github.com/quill-and-seal/Ember) : temps clair, pluie, orage, neige, brouillard), **intérieur / extérieur** (Régions isolées), et une plage de **tension**.
 
-La **tension** (Calme, Inquiétant, Danger, Terreur) se règle d'un clic en haut de la fenêtre pendant la partie. Quatre modèles (forêt, tempête, taverne, donjon) posent des couches prêtes : les couches générées jouent tout de suite, il reste à choisir les fichiers des autres.
+La **tension** (Calme, Inquiétant, Danger, Terreur) se règle d'un clic en haut du panneau Vesper pendant la partie. Quatre modèles (forêt, tempête, taverne, donjon) posent des couches prêtes : les couches générées jouent tout de suite, il reste à choisir les fichiers des autres.
 
 ## 4. Sons procéduraux et atelier sonore
 
@@ -88,7 +88,7 @@ Un son procédural est **calculé en direct** au lieu d'être lu dans un fichier
 - **Sur la carte** : pose un son d'ambiance comme d'habitude, et choisis un **Son procédural** dans la section Vesper de sa fenêtre (le fichier se remplit tout seul). Distance, murs et réverbération s'appliquent comme pour un fichier. Le champ **Intensité** fixe la taille du feu (vide : il suit le vent).
 - **Dans le paysage sonore** : une **couche générée** propose les mêmes sons. Le modèle « Campement » pose un feu et des grillons la nuit.
 
-**L'atelier sonore** (case **Vesper** → bouton fiole) sert à créer ses propres sons. Une recette est un empilement de **couches** :
+**L'atelier sonore** (bouton **Atelier** de l'onglet Sons, ou le crayon d'un son) est une fenêtre à part : la liste des sons à gauche, le son choisi à droite, ses couches repliables. Un son créé là n'apparaît dans le panneau qu'après **Enregistrer dans la bibliothèque** ; « Retirer de la bibliothèque » le garde dans l'atelier sans l'afficher. Une recette est un empilement de **couches** :
 
 | Source | Pour faire |
 |---|---|

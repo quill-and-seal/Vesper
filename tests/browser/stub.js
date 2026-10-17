@@ -70,13 +70,31 @@ globalThis.foundry = {
       ApplicationV2: class {
         constructor(options = {}) {
           this.options = options;
+          this.position = { left: 100, top: 60, width: 600, height: 500, ...(this.constructor.DEFAULT_OPTIONS?.position ?? {}) };
+        }
+        get rendered() {
+          return !!this.element?.isConnected;
+        }
+        get id() {
+          return this.options.id ?? this.constructor.DEFAULT_OPTIONS?.id ?? "app";
+        }
+        setPosition(pos = {}) {
+          Object.assign(this.position, pos);
+          if (this.element) {
+            const p = this.position;
+            Object.assign(this.element.style, { position: "fixed", left: `${p.left}px`, top: `${p.top}px`, width: `${p.width}px`, height: p.height === "auto" ? "auto" : `${p.height}px` });
+          }
+          this._onPosition?.(this.position);
+          return this.position;
         }
         async render() {
           if (!this.element) {
-            this.element = document.createElement("form");
-            this.element.innerHTML = `<section class="window-content"></section>`;
-            document.body.append(this.element);
             const opts = this.constructor.DEFAULT_OPTIONS ?? {};
+            this.element = document.createElement(opts.tag ?? "div");
+            this.element.className = ["application", ...(opts.classes ?? [])].join(" ");
+            this.element.innerHTML = `<header class="window-header"><h1 class="window-title">${this.title ?? ""}</h1></header><section class="window-content"></section>`;
+            document.body.append(this.element);
+            this.setPosition();
             // Comme ApplicationV2 : boutons data-action et soumission du formulaire à chaque changement
             this.element.addEventListener("click", (ev) => {
               const target = ev.target.closest("[data-action]");
@@ -107,6 +125,7 @@ globalThis.foundry = {
         }
         close() {
           this.element?.remove();
+          this.element = null;
           this._onClose?.({});
         }
       }
@@ -140,6 +159,7 @@ globalThis.game = {
   user: { isGM: true },
   modules: { get: (id) => modules.get(id) },
   settings: {
+    settings,
     register(mod, key, cfg) {
       settings.set(`${mod}.${key}`, { ...cfg, value: cfg.default });
     },
@@ -172,7 +192,10 @@ const scene = makeFlagged({
   grid: { units: "m" },
   environment: { darknessLevel: 0 },
   sounds: Object.assign([], { get(id) { return this.find((d) => d.id === id); } }),
-  regions: []
+  async createEmbeddedDocuments(type, list) {
+    return list.map((data, i) => T.makeSound(`new${Date.now()}${i}`, data.x, data.y, { ...data, radius: data.radius }));
+  },
+  regions: Object.assign([], { get(id) { return this.find((d) => d.id === id); } })
 });
 
 globalThis.canvas = {
@@ -211,6 +234,11 @@ globalThis.T = {
       ...extra
     });
     doc.parent = scene;
+    doc.delete = async () => {
+      scene.sounds.splice(scene.sounds.indexOf(doc), 1);
+      Hooks.call("deleteAmbientSound", doc, {}, "gm");
+      return doc;
+    };
     doc.object = { radius: doc.radius * canvas.dimensions.distancePixels, isAudible: true };
     scene.sounds.push(doc);
     return doc;
@@ -223,7 +251,8 @@ globalThis.T = {
   region(x1, y1, x2, y2, system) {
     const r = {
       id: `r${scene.regions.length}`,
-      behaviors: { contents: [{ id: "b", type: "vesper-audio.acoustics", disabled: false, system }] },
+      name: system?.name ?? `Pièce ${scene.regions.length + 1}`,
+      behaviors: { contents: system ? [{ id: "b", type: "vesper-audio.acoustics", disabled: false, system, update: async (ch) => Object.assign(system, Object.fromEntries(Object.entries(ch).map(([k, v]) => [k.replace("system.", ""), v]))) }] : [] },
       testPoint: (p) => p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2,
       polygons: [{ points: [x1, y1, x2, y1, x2, y2, x1, y2] }]
     };
