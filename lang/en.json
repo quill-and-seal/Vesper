@@ -1,0 +1,236 @@
+{
+  "TYPES": {
+    "RegionBehavior": {
+      "vesper-audio.acoustics": "Acoustics (Vesper)"
+    }
+  },
+  "VESPER": {
+    "Settings": {
+      "takeover": {
+        "Name": "Vesper plays ambient sounds",
+        "Hint": "Ambient sounds placed with Foundry's tools are played by Vesper (direction, walls, reverb). Unchecked: Foundry plays them as usual. Each sound can also be handed back to Foundry in its sheet."
+      },
+      "realism": {
+        "Name": "Distance falloff realism",
+        "Hint": "1: physical law (drops fast near the source, then slowly, like in real life). 0: linear to the edge, like Foundry."
+      },
+      "airAbsorption": {
+        "Name": "Air absorption",
+        "Hint": "Distant sounds lose their highs and sound duller."
+      },
+      "wallLoss": {
+        "Name": "Solid wall (dB)",
+        "Hint": "Volume lost through a wall that blocks sound. Highs are strongly reduced too."
+      },
+      "doorLoss": {
+        "Name": "Closed door (dB)",
+        "Hint": "Loss through a closed door (an open door lets everything through)."
+      },
+      "thinLoss": {
+        "Name": "Limited wall (dB)",
+        "Hint": "Loss through a wall that is « limited » for sound: curtain, fence, partition."
+      },
+      "defaultPlace": {
+        "Name": "Default acoustic place",
+        "Hint": "Reverb outside « Acoustics » Regions for scenes that don't choose one (set per scene in the soundscape)."
+      },
+      "gmListener": {
+        "Name": "GM listening without a token",
+        "Hint": "When the GM controls no token.",
+        "Camera": "From the center of the screen",
+        "None": "Nothing (placed sounds are silent)"
+      },
+      "panning": {
+        "Name": "Spatialization",
+        "Hint": "HRTF: 3D sound on headphones (recommended). Stereo: simple left/right, lighter. Off: all sounds centered.",
+        "Hrtf": "HRTF (headphones)",
+        "Stereo": "Simple stereo",
+        "Off": "Off"
+      },
+      "occlusionQuality": {
+        "Name": "Wall precision",
+        "Hint": "Precise: five rays per sound, sound leaks through openings. Fast: a single ray.",
+        "High": "Precise",
+        "Low": "Fast"
+      },
+      "masterVolume": {
+        "Name": "Vesper volume",
+        "Hint": "Applied on top of Foundry's « Ambient » slider."
+      },
+      "spatialVolume": {
+        "Name": "Placed sounds volume",
+        "Hint": "The scene's ambient sounds."
+      },
+      "soundscapeVolume": {
+        "Name": "Soundscape volume",
+        "Hint": "Ambience layers."
+      },
+      "reverbVolume": {
+        "Name": "Reverb volume",
+        "Hint": "1 = the level the place calls for."
+      },
+      "soundscape": {
+        "Name": "Soundscape",
+        "Hint": "Uncheck to stop hearing ambience layers (on this computer)."
+      }
+    },
+    "Place": {
+      "none": "No reverb",
+      "outdoor": "Open air",
+      "forest": "Forest",
+      "room": "Small room",
+      "tavern": "Tavern, inn",
+      "hall": "Great hall, castle",
+      "cathedral": "Cathedral, temple",
+      "dungeon": "Stone dungeon",
+      "cave": "Cave",
+      "tunnel": "Tunnel, sewer",
+      "underwater": "Underwater"
+    },
+    "RegionBehavior": {
+      "FIELDS": {
+        "place": {
+          "label": "Acoustic place",
+          "hint": "The reverb you hear while standing in the Region."
+        },
+        "wet": {
+          "label": "Reverb level",
+          "hint": "Empty: recommended level for this place."
+        },
+        "isolation": {
+          "label": "Isolation",
+          "hint": "0: open. 1: tightly closed. Sounds from one side heard on the other are muffled, even without walls, and « outdoor » ambience layers become dull inside."
+        }
+      }
+    },
+    "Controls": {
+      "Soundscape": "Soundscape (Vesper)"
+    },
+    "Soundscape": {
+      "Title": "Soundscape — {scene}",
+      "Tension": "Tension",
+      "Enabled": "Soundscape on",
+      "Volume": "Volume",
+      "DefaultPlace": "Scene acoustic place",
+      "Wet": "Reverb level",
+      "DefaultPlaceHint": "Reverb outside « Acoustics » Regions. For a room, a cave, a tavern: add the « Acoustics (Vesper) » behavior to a Region.",
+      "Empty": "No layers. Add a loop, scattered sounds, a generated layer, or start from a template."
+    },
+    "Tension": {
+      "0": "Calm",
+      "1": "Uneasy",
+      "2": "Danger",
+      "3": "Terror"
+    },
+    "State": {
+      "Day": "Day",
+      "Night": "Night",
+      "Combat": "Combat",
+      "NoCombat": "No combat",
+      "Inside": "Inside",
+      "Outside": "Outside",
+      "NoEmber": "Weather: Ember inactive"
+    },
+    "Kind": {
+      "loop": "Loop",
+      "scatter": "Scattered sounds",
+      "synth": "Generated layer"
+    },
+    "Layer": {
+      "Synth": "Generated sound",
+      "FilesLoop": "File",
+      "FilesScatter": "Files (one at random each time)",
+      "AddFile": "Add",
+      "FilesPlaceholder": "One path per line",
+      "Volume": "Volume",
+      "Fade": "Fade (s)",
+      "Outdoor": "Outdoor",
+      "OutdoorHint": "Muffled when entering an isolated Region (the storm from inside the tavern).",
+      "Playing": "Playing now",
+      "Silent": "Silent (conditions not met)",
+      "Up": "Move up",
+      "Down": "Move down",
+      "Duplicate": "Duplicate",
+      "Remove": "Remove"
+    },
+    "Synth": {
+      "wind": "Wind",
+      "rain": "Rain",
+      "drone": "Tension drone",
+      "heartbeat": "Heartbeat",
+      "windHint": "Follows Ember's wind strength if active, otherwise blows softly and grows with tension.",
+      "rainHint": "Follows Ember's rain intensity if active.",
+      "droneHint": "Low and slow, more and more dissonant with tension.",
+      "heartbeatHint": "Speeds up with tension (58 to 120 beats per minute)."
+    },
+    "When": {
+      "Title": "Plays when",
+      "Tension": "Tension",
+      "time": {
+        "any": "Day and night",
+        "day": "Daytime",
+        "night": "Night"
+      },
+      "combat": {
+        "any": "Combat or not",
+        "yes": "In combat",
+        "no": "Out of combat"
+      },
+      "weather": {
+        "any": "Any weather",
+        "clear": "Clear",
+        "rain": "Rain (and storm)",
+        "storm": "Storm",
+        "snow": "Snow",
+        "fog": "Fog"
+      },
+      "place": {
+        "any": "Anywhere",
+        "outside": "Outside",
+        "inside": "Inside"
+      }
+    },
+    "Scatter": {
+      "Min": "Min interval (s)",
+      "Max": "Max interval (s)",
+      "Spread": "Width",
+      "Distance": "Share of distant",
+      "Pitch": "Pitch variation"
+    },
+    "Template": {
+      "Choose": "Start from a template…",
+      "forest": "Forest",
+      "storm": "Storm",
+      "tavern": "Tavern",
+      "dungeon": "Dungeon",
+      "Added": "Layers added: pick their files (generated layers already play).",
+      "Layer": {
+        "Wind": "Wind",
+        "Birds": "Birds",
+        "NightCritters": "Crickets, owls",
+        "Dread": "Dread",
+        "Rain": "Rain",
+        "Thunder": "Thunder",
+        "Crowd": "Crowd",
+        "Mugs": "Mugs, laughter",
+        "Drips": "Drips",
+        "Distant": "Distant noises",
+        "Heart": "Heart"
+      }
+    },
+    "SoundConfig": {
+      "Managed": "Managed by Vesper",
+      "ManagedHint": "Direction, walls and reverb. Unchecked: Foundry plays this sound as usual.",
+      "Directional": "Directional sound",
+      "DirectionalHint": "The sound comes from one side. Unchecked: a bed with no direction (rain over the whole area).",
+      "Size": "Source size (squares)",
+      "SizeHint": "A river, a crowd, a waterfall are large: they fade more slowly and sound wider."
+    },
+    "Error": {
+      "GMOnly": "Only the GM can change the soundscape."
+    },
+    "Log": {
+      "NoEmber": "Ember is not active: layer weather conditions assume clear weather."
+    }
+  }
+}

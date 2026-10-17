@@ -1,0 +1,203 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vesper — banc d'essai</title>
+<script src="./stub.js"></script>
+<script type="module">
+  const results = {};
+  const log = (k, v) => (results[k] = v);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  try {
+    await import("/scripts/main.js");
+    await Hooks.call("init");
+    await Hooks.call("ready");
+    await T.ctx.resume();
+    await Hooks.call("canvasReady");
+
+    const api = game.modules.get("vesper-audio").api;
+    const { out, spatial, soundscape } = api.engine;
+    const tick = setInterval(() => spatial.update(), 50);
+
+    /* Mesure : analyseurs gauche/droite sur un bus */
+    function probe(node) {
+      const split = T.ctx.createChannelSplitter(2);
+      node.connect(split);
+      const an = [0, 1].map((i) => {
+        const a = T.ctx.createAnalyser();
+        a.fftSize = 4096;
+        split.connect(a, i);
+        return a;
+      });
+      return async (ms = 700) => {
+        const td = new Float32Array(4096);
+        const fd = new Float32Array(2048);
+        let e = [0, 0], hi = 0, lo = 0, n = 0;
+        const t0 = performance.now();
+        while (performance.now() - t0 < ms) {
+          for (let c = 0; c < 2; c++) {
+            an[c].getFloatTimeDomainData(td);
+            e[c] += td.reduce((s, v) => s + v * v, 0) / td.length;
+          }
+          an[0].getFloatFrequencyData(fd);
+          const binHz = T.ctx.sampleRate / 4096;
+          fd.forEach((db, i) => {
+            const p = Math.pow(10, db / 10);
+            if (i * binHz > 5000) hi += p;
+            else if (i * binHz > 100 && i * binHz < 1500) lo += p;
+          });
+          n++;
+          await sleep(40);
+        }
+        const db = (x) => +(10 * Math.log10(x / n + 1e-12)).toFixed(1);
+        return { L: db(e[0]), R: db(e[1]), dB: db((e[0] + e[1]) / 2), hiVsLo: +(10 * Math.log10((hi + 1e-12) / (lo + 1e-12))).toFixed(1) };
+      };
+    }
+    const dry = probe(out.spatialBus);
+    const wet = probe(out.reverb.level);
+    const bed = probe(out.bedBus);
+    const settle = () => sleep(900);
+
+    log("takeover", (() => {
+      const o = new CONFIG.AmbientSound.objectClass(T.makeSound("probe", 99999, 99999));
+      return o.sync(true, 1).then(() => o.lastSync);
+    })());
+    results.takeover = await results.takeover;
+    T.scene.sounds.length = 0;
+
+    // A. Distance
+    const s = T.makeSound("s1", 50, 0);
+    spatial.sync();
+    const dist = {};
+    for (const x of [50, 200, 400, 800, 990]) {
+      s.x = x;
+      await settle();
+      dist[x] = await dry();
+    }
+    log("distance", dist);
+
+    // C. Panoramique (source à droite, puis à gauche)
+    s.x = 300; s.y = 0;
+    await settle();
+    const right = await dry();
+    s.x = -300;
+    await settle();
+    const left = await dry();
+    log("pan", { right, left });
+
+    // B. Mur, porte fermée, porte ouverte
+    s.x = 400; s.y = 0;
+    await settle();
+    const open = await dry();
+    const w = T.wall(200, -2000, 200, 2000);
+    spatial.refreshWalls();
+    await settle();
+    const walled = await dry();
+    w.document.door = 1;
+    spatial.refreshWalls();
+    await settle();
+    const closedDoor = await dry();
+    w.document.ds = 1;
+    spatial.refreshWalls();
+    await settle();
+    const openDoor = await dry();
+    canvas.walls.placeables.length = 0;
+    spatial.refreshWalls();
+    log("walls", { open, walled, closedDoor, openDoor });
+
+    // D. Réverbération : plein air (défaut) puis caverne autour de l'auditeur
+    await settle();
+    const outdoorWet = await wet();
+    T.region(-500, -500, 500, 500, { place: "cave", wet: null, isolation: 0 });
+    spatial.refreshZones();
+    await sleep(1800);
+    const caveWet = await wet();
+    log("reverb", { place: spatial.listenerPlace.place, outdoorWet, caveWet });
+
+    // E. Isolation : l'auditeur dans une pièce isolée, la source dehors, sans murs
+    T.scene.regions.length = 0;
+    T.region(-100, -100, 100, 100, { place: "room", wet: null, isolation: 1 });
+    spatial.refreshZones();
+    await settle();
+    const isolated = await dry();
+    T.scene.regions.length = 0;
+    spatial.refreshZones();
+    await settle();
+    const notIsolated = await dry();
+    log("isolation", { isolated, notIsolated });
+
+    // Hors de portée : la voix est libérée
+    s.x = 5000;
+    await settle();
+    log("released", spatial.describe().voices.length);
+    T.scene.sounds.length = 0;
+    spatial.refreshSounds();
+
+    // F. Paysage sonore : pluie générée la nuit, nappe à partir de « Danger »
+    await api.setSoundscape({
+      layers: [
+        { id: "rain", kind: "synth", synth: "rain", volume: -6, when: { time: "night" } },
+        { id: "drone", kind: "synth", synth: "drone", volume: -6, when: { tensionMin: 2 } }
+      ]
+    });
+    await settle();
+    const day = await bed();
+    canvas.environment.darknessLevel = 1;
+    await sleep(2500);
+    const night = await bed();
+    const activeNight = soundscape.describe().layers.map((l) => [l.id, l.active]);
+    await api.setTension(2);
+    await sleep(300);
+    const activeDanger = soundscape.describe().layers.map((l) => [l.id, l.active]);
+    log("soundscape", { day, night, activeNight, activeDanger });
+
+    // Intérieur isolé : la pluie (couche extérieure) devient sourde
+    T.region(-100, -100, 100, 100, { place: "tavern", wet: null, isolation: 1 });
+    spatial.refreshZones();
+    await api.setTension(0);
+    await sleep(2500);
+    const insideBed = await bed();
+    T.scene.regions.length = 0;
+    spatial.refreshZones();
+    await sleep(2500);
+    const outsideBed = await bed();
+    log("muffle", { insideBed, outsideBed });
+
+    // G. Sons dispersés
+    await api.setSoundscape({ layers: [{ id: "clicks", kind: "scatter", paths: ["/tests/browser/click.wav"], volume: 0, scatter: { min: 0.5, max: 0.8 } }] });
+    await sleep(800);
+    const an = T.ctx.createAnalyser();
+    an.fftSize = 1024;
+    out.bedBus.connect(an);
+    const td = new Float32Array(1024);
+    let peaks = 0, wasLoud = false;
+    const t0 = performance.now();
+    while (performance.now() - t0 < 4000) {
+      an.getFloatTimeDomainData(td);
+      const loud = td.some((v) => Math.abs(v) > 0.05);
+      if (loud && !wasLoud) peaks++;
+      wasLoud = loud;
+      await sleep(10);
+    }
+    log("scatter", { peaks, scheduled: soundscape.scheduled.size });
+
+    // J. Son ponctuel
+    const shot = await api.playAt("/tests/browser/click.wav", { x: 100, y: 0 }, { radius: 20 });
+    log("playAt", { played: !!shot, emitted: (T.emitted ?? []).length });
+
+    // I. Fenêtre du paysage sonore
+    await api.setSoundscape({ layers: [{ id: "a", kind: "loop", paths: ["x.ogg"], label: "Foule" }, { id: "b", kind: "scatter", paths: [] }, { id: "c", kind: "synth", synth: "wind" }] });
+    const app = await api.openSoundscape();
+    log("app", { layers: app.element.querySelectorAll(".vesper-layer").length, tension: app.element.querySelectorAll(".vesper-tension-btn").length });
+
+    // K. Fenêtre d'un son d'ambiance
+    const fakeHtml = document.createElement("form");
+    fakeHtml.innerHTML = "<div class=form-group></div><footer class=form-footer></footer>";
+    await Hooks.call("renderAmbientSoundConfig", { document: T.makeSound("cfg", 0, 0), setPosition() {} }, fakeHtml);
+    log("soundConfig", [...fakeHtml.querySelectorAll(".vesper-sound-config input")].map((i) => i.name));
+
+    clearInterval(tick);
+    window.__done = { ok: true, results };
+  } catch (err) {
+    window.__done = { ok: false, error: String(err.stack ?? err), results };
+  }
+</script>

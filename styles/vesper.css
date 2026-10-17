@@ -1,0 +1,236 @@
+/* Vesper — styles des fenêtres */
+
+.vesper {
+  --vesper-accent: #5fb3b3;
+  --vesper-accent-soft: rgba(95, 179, 179, 0.15);
+  --vesper-t1: #c9b458;
+  --vesper-t2: #d9822b;
+  --vesper-t3: #c0392b;
+}
+
+.vesper .vesper-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 100%;
+}
+
+.vesper .notes,
+.vesper-sound-config .hint {
+  opacity: 0.75;
+  font-size: 0.88em;
+  margin: 0;
+}
+
+.vesper .vesper-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vesper .vesper-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.vesper .vesper-chip {
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  background: var(--vesper-accent-soft);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.vesper .vesper-tension {
+  display: flex;
+  gap: 0.25rem;
+  flex: 2;
+}
+
+.vesper .vesper-tension-btn {
+  flex: 1;
+  opacity: 0.6;
+}
+
+.vesper .vesper-tension-btn.active {
+  opacity: 1;
+  outline: 2px solid var(--vesper-accent);
+}
+
+.vesper .vesper-tension-btn.t1.active { outline-color: var(--vesper-t1); }
+.vesper .vesper-tension-btn.t2.active { outline-color: var(--vesper-t2); }
+.vesper .vesper-tension-btn.t3.active { outline-color: var(--vesper-t3); }
+
+.vesper .vesper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.vesper .vesper-num {
+  width: 4.5rem;
+  flex: 0 0 auto;
+}
+
+.vesper .vesper-layers {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.25rem;
+}
+
+.vesper .vesper-empty {
+  opacity: 0.7;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.vesper .vesper-layer {
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vesper .vesper-layer.is-active {
+  border-left-color: var(--vesper-accent);
+}
+
+.vesper .vesper-layer legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.vesper .vesper-layer legend input[type="text"] {
+  flex: 1;
+}
+
+.vesper .vesper-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: rgba(128, 128, 128, 0.5);
+  flex: 0 0 auto;
+}
+
+.vesper .vesper-layer.is-active .vesper-dot {
+  background: var(--vesper-accent);
+  box-shadow: 0 0 6px var(--vesper-accent);
+}
+
+.vesper .vesper-tools {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.vesper .vesper-tools a.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.vesper .vesper-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.3rem 0.6rem;
+  align-items: end;
+}
+
+.vesper .vesper-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.9em;
+}
+
+.vesper .vesper-grid label.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.vesper .vesper-range {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vesper .vesper-range input {
+  flex: 1;
+}
+
+.vesper .vesper-range output {
+  min-width: 3.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vesper .vesper-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.9em;
+}
+
+.vesper .vesper-when select {
+  width: auto;
+  flex: 0 1 auto;
+}
+
+.vesper .vesper-when-title {
+  opacity: 0.75;
+}
+
+.vesper .vesper-tension-range {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.vesper .form-group.stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.vesper .form-group.stacked label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vesper .vesper-mini {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1.4;
+  padding: 0 0.5rem;
+  font-size: 0.85em;
+}
+
+.vesper textarea {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85em;
+  resize: vertical;
+}
+
+.vesper .vesper-foot {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.vesper .vesper-foot button {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.vesper .vesper-foot select {
+  flex: 1.3;
+}

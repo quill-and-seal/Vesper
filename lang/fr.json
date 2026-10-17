@@ -1,0 +1,236 @@
+{
+  "TYPES": {
+    "RegionBehavior": {
+      "vesper-audio.acoustics": "Acoustique (Vesper)"
+    }
+  },
+  "VESPER": {
+    "Settings": {
+      "takeover": {
+        "Name": "Vesper joue les sons d'ambiance",
+        "Hint": "Les sons d'ambiance posés avec les outils de Foundry sont joués par Vesper (direction, murs, réverbération). Décoché : Foundry les joue comme d'habitude. Chaque son peut aussi être rendu à Foundry dans sa fenêtre."
+      },
+      "realism": {
+        "Name": "Réalisme de l'atténuation",
+        "Hint": "1 : loi physique (le son baisse vite près de la source puis lentement, comme en vrai). 0 : baisse linéaire jusqu'au bord, comme Foundry."
+      },
+      "airAbsorption": {
+        "Name": "Absorption de l'air",
+        "Hint": "Un son lointain perd ses aigus et paraît plus sourd."
+      },
+      "wallLoss": {
+        "Name": "Mur plein (dB)",
+        "Hint": "Perte de volume à travers un mur qui bloque le son. Les aigus sont aussi très atténués."
+      },
+      "doorLoss": {
+        "Name": "Porte fermée (dB)",
+        "Hint": "Perte à travers une porte fermée (une porte ouverte laisse tout passer)."
+      },
+      "thinLoss": {
+        "Name": "Mur limité (dB)",
+        "Hint": "Perte à travers un mur « limité » pour le son : tenture, palissade, cloison."
+      },
+      "defaultPlace": {
+        "Name": "Lieu acoustique par défaut",
+        "Hint": "Réverbération hors des Régions « Acoustique », pour les scènes qui n'en choisissent pas (réglable par scène dans le paysage sonore)."
+      },
+      "gmListener": {
+        "Name": "Écoute du MJ sans token",
+        "Hint": "Quand le MJ ne contrôle aucun token.",
+        "Camera": "Depuis le centre de l'écran",
+        "None": "Rien (silence des sons positionnés)"
+      },
+      "panning": {
+        "Name": "Spatialisation",
+        "Hint": "HRTF : son en 3D au casque (conseillé). Stéréo : simple gauche/droite, plus léger. Désactivée : tous les sons au centre.",
+        "Hrtf": "HRTF (casque)",
+        "Stereo": "Stéréo simple",
+        "Off": "Désactivée"
+      },
+      "occlusionQuality": {
+        "Name": "Précision des murs",
+        "Hint": "Précise : cinq rayons par son, le son filtre par les ouvertures. Rapide : un seul rayon.",
+        "High": "Précise",
+        "Low": "Rapide"
+      },
+      "masterVolume": {
+        "Name": "Volume de Vesper",
+        "Hint": "S'ajoute au curseur « Ambiance » de Foundry."
+      },
+      "spatialVolume": {
+        "Name": "Volume des sons posés",
+        "Hint": "Sons d'ambiance de la scène."
+      },
+      "soundscapeVolume": {
+        "Name": "Volume du paysage sonore",
+        "Hint": "Couches d'ambiance."
+      },
+      "reverbVolume": {
+        "Name": "Volume de la réverbération",
+        "Hint": "1 = niveau prévu par le lieu."
+      },
+      "soundscape": {
+        "Name": "Paysage sonore",
+        "Hint": "Décocher pour ne plus entendre les couches d'ambiance (sur cet ordinateur)."
+      }
+    },
+    "Place": {
+      "none": "Aucune réverbération",
+      "outdoor": "Plein air",
+      "forest": "Forêt",
+      "room": "Petite pièce",
+      "tavern": "Taverne, auberge",
+      "hall": "Grande salle, château",
+      "cathedral": "Cathédrale, temple",
+      "dungeon": "Donjon de pierre",
+      "cave": "Caverne",
+      "tunnel": "Tunnel, égout",
+      "underwater": "Sous l'eau"
+    },
+    "RegionBehavior": {
+      "FIELDS": {
+        "place": {
+          "label": "Lieu acoustique",
+          "hint": "La réverbération qu'on entend quand on se tient dans la Région."
+        },
+        "wet": {
+          "label": "Niveau de réverbération",
+          "hint": "Vide : niveau conseillé pour ce lieu."
+        },
+        "isolation": {
+          "label": "Isolation",
+          "hint": "0 : ouvert. 1 : bien fermé. Les sons qui viennent d'un côté et sont entendus de l'autre sont étouffés, même sans murs, et les couches d'ambiance « extérieures » deviennent sourdes à l'intérieur."
+        }
+      }
+    },
+    "Controls": {
+      "Soundscape": "Paysage sonore (Vesper)"
+    },
+    "Soundscape": {
+      "Title": "Paysage sonore — {scene}",
+      "Tension": "Tension",
+      "Enabled": "Paysage actif",
+      "Volume": "Volume",
+      "DefaultPlace": "Lieu acoustique de la scène",
+      "Wet": "Niveau de réverbération",
+      "DefaultPlaceHint": "Réverbération hors des Régions « Acoustique ». Pour une pièce, une grotte, une taverne : ajoute à une Région le comportement « Acoustique (Vesper) ».",
+      "Empty": "Aucune couche. Ajoute une boucle, des sons dispersés, une couche générée, ou pars d'un modèle."
+    },
+    "Tension": {
+      "0": "Calme",
+      "1": "Inquiétant",
+      "2": "Danger",
+      "3": "Terreur"
+    },
+    "State": {
+      "Day": "Jour",
+      "Night": "Nuit",
+      "Combat": "Combat",
+      "NoCombat": "Hors combat",
+      "Inside": "Intérieur",
+      "Outside": "Extérieur",
+      "NoEmber": "Météo : Ember inactif"
+    },
+    "Kind": {
+      "loop": "Boucle",
+      "scatter": "Sons dispersés",
+      "synth": "Couche générée"
+    },
+    "Layer": {
+      "Synth": "Son généré",
+      "FilesLoop": "Fichier",
+      "FilesScatter": "Fichiers (un au hasard à chaque fois)",
+      "AddFile": "Ajouter",
+      "FilesPlaceholder": "Un chemin par ligne",
+      "Volume": "Volume",
+      "Fade": "Fondu (s)",
+      "Outdoor": "Extérieure",
+      "OutdoorHint": "Étouffée quand on entre dans une Région isolée (l'orage depuis la taverne).",
+      "Playing": "Joue en ce moment",
+      "Silent": "Silencieuse (conditions non remplies)",
+      "Up": "Monter",
+      "Down": "Descendre",
+      "Duplicate": "Dupliquer",
+      "Remove": "Supprimer"
+    },
+    "Synth": {
+      "wind": "Vent",
+      "rain": "Pluie",
+      "drone": "Nappe de tension",
+      "heartbeat": "Battement de cœur",
+      "windHint": "Suit la force du vent d'Ember s'il est actif, sinon souffle doucement et forcit avec la tension.",
+      "rainHint": "Suit l'intensité de la pluie d'Ember s'il est actif.",
+      "droneHint": "Grave et lente, de plus en plus dissonante avec la tension.",
+      "heartbeatHint": "Accélère avec la tension (de 58 à 120 battements par minute)."
+    },
+    "When": {
+      "Title": "Joue quand",
+      "Tension": "Tension",
+      "time": {
+        "any": "Jour et nuit",
+        "day": "Le jour",
+        "night": "La nuit"
+      },
+      "combat": {
+        "any": "Combat ou non",
+        "yes": "En combat",
+        "no": "Hors combat"
+      },
+      "weather": {
+        "any": "Toute météo",
+        "clear": "Temps clair",
+        "rain": "Pluie (et orage)",
+        "storm": "Orage",
+        "snow": "Neige",
+        "fog": "Brouillard"
+      },
+      "place": {
+        "any": "Partout",
+        "outside": "À l'extérieur",
+        "inside": "À l'intérieur"
+      }
+    },
+    "Scatter": {
+      "Min": "Intervalle min (s)",
+      "Max": "Intervalle max (s)",
+      "Spread": "Largeur",
+      "Distance": "Part de lointains",
+      "Pitch": "Variation de hauteur"
+    },
+    "Template": {
+      "Choose": "Partir d'un modèle…",
+      "forest": "Forêt",
+      "storm": "Tempête",
+      "tavern": "Taverne",
+      "dungeon": "Donjon",
+      "Added": "Couches ajoutées : choisis leurs fichiers (les couches générées jouent déjà).",
+      "Layer": {
+        "Wind": "Vent",
+        "Birds": "Oiseaux",
+        "NightCritters": "Grillons, hiboux",
+        "Dread": "Malaise",
+        "Rain": "Pluie",
+        "Thunder": "Tonnerre",
+        "Crowd": "Brouhaha",
+        "Mugs": "Chopes, rires",
+        "Drips": "Gouttes",
+        "Distant": "Bruits lointains",
+        "Heart": "Cœur"
+      }
+    },
+    "SoundConfig": {
+      "Managed": "Géré par Vesper",
+      "ManagedHint": "Direction, murs et réverbération. Décoché : Foundry joue ce son comme d'habitude.",
+      "Directional": "Son directionnel",
+      "DirectionalHint": "Le son vient d'un côté. Décoché : nappe sans direction (une pluie sur toute la zone).",
+      "Size": "Taille de la source (cases)",
+      "SizeHint": "Une rivière, une foule, une cascade sont grandes : elles faiblissent moins vite et leur son est plus large."
+    },
+    "Error": {
+      "GMOnly": "Seul le MJ peut modifier le paysage sonore."
+    },
+    "Log": {
+      "NoEmber": "Ember n'est pas actif : les conditions de météo des couches considèrent un temps clair."
+    }
+  }
+}
