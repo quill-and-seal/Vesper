@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Feu de camp plus doux, sur le modèle d'une cheminée : crépitements plus rares, plus petits et plus chauds (médiums plutôt qu'aigus), moins de rafales ; bûches qui éclatent plus rares et plus sourdes. Crête divisée par deux environ.
+- Torche : grésillements adoucis de la même façon.
+
 ## 0.2.2
 
 - Couches « seulement de près » : une couche d'un son procédural peut ne s'entendre qu'à moins d'une certaine distance de la source, et monte quand on s'approche.

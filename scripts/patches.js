@@ -220,7 +220,7 @@ export const BUILTIN_PATCHES = {
     icon: "fa-solid fa-fire",
     intensity: "wind",
     fixed: 0.45,
-    volume: -2,
+    volume: 5,
     layers: [
       {
         id: "roar",
@@ -235,19 +235,21 @@ export const BUILTIN_PATCHES = {
         id: "crackle",
         label: "Crépitements",
         source: {
-          type: "events", rate: r(4, 18), regularity: 0, burstChance: r(0.07, 0.13), burstMin: 3, burstMax: 9, burstGap: 0.025,
-          grain: "noise", decay: 1, ring: 0.2, freqMin: 1500, freqMax: 7000, q: 1.2, drop: 1, ampMin: 0.06, ampMax: 0.55, skew: 3, spread: 0.35
+          type: "events", rate: r(3, 10), regularity: 0, burstChance: r(0.04, 0.08), burstMin: 2, burstMax: 5, burstGap: 0.03,
+          grain: "noise", decay: 2.5, ring: 0.08, freqMin: 700, freqMax: 3500, q: 0.8, drop: 1, ampMin: 0.02, ampMax: 0.3, skew: 4, spread: 0.4
         },
-        gain: 3.2
+        filters: [{ type: "lowpass", freq: 5000, q: 0.5 }],
+        gain: 1.3
       },
       {
         id: "pops",
         label: "Bûches qui éclatent",
         source: {
-          type: "events", rate: r(0.15, 0.35), regularity: 0.2, burstChance: 0.5, burstMin: 2, burstMax: 5, burstGap: 0.05,
-          grain: "noise", decay: 7, ring: 0.35, freqMin: 600, freqMax: 2000, q: 0.6, drop: 1, ampMin: 0.45, ampMax: 0.8, skew: 1, spread: 0.25
+          type: "events", rate: r(0.08, 0.2), regularity: 0.2, burstChance: 0.35, burstMin: 2, burstMax: 3, burstGap: 0.06,
+          grain: "noise", decay: 10, ring: 0.2, freqMin: 400, freqMax: 1200, q: 0.6, drop: 1, ampMin: 0.25, ampMax: 0.45, skew: 1.5, spread: 0.25
         },
-        gain: 2.2
+        filters: [{ type: "lowpass", freq: 3500, q: 0.5 }],
+        gain: 1
       }
     ]
   },
@@ -256,6 +258,7 @@ export const BUILTIN_PATCHES = {
     icon: "fa-solid fa-fire-flame-simple",
     intensity: "wind",
     fixed: 0.4,
+    volume: 4,
     layers: [
       {
         id: "flame",
@@ -271,9 +274,10 @@ export const BUILTIN_PATCHES = {
         label: "Grésillements",
         source: {
           type: "events", rate: r(1.5, 6), regularity: 0, burstChance: 0.15, burstMin: 2, burstMax: 4, burstGap: 0.02,
-          grain: "noise", decay: 0.8, ring: 0.1, freqMin: 2500, freqMax: 8000, q: 1, drop: 1, ampMin: 0.04, ampMax: 0.3, skew: 2.5, spread: 0.1
+          grain: "noise", decay: 2, ring: 0.05, freqMin: 1200, freqMax: 4500, q: 0.8, drop: 1, ampMin: 0.02, ampMax: 0.25, skew: 3.5, spread: 0.1
         },
-        gain: 4.5
+        filters: [{ type: "lowpass", freq: 6000, q: 0.5 }],
+        gain: 2
       }
     ]
   },
