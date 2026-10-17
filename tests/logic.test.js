@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nearFactor } from "../scripts/audio/patch-player.js";
 import assert from "node:assert/strict";
 import { segmentsCross, pointInShape, polygonArea } from "../scripts/geometry.js";
 import { distanceGain, airCutoff, toMeters, occlusion, direction, wallMaterial, MATERIAL_DEFAULTS, SENSE, DOOR, DOOR_STATE } from "../scripts/acoustics.js";
@@ -241,4 +242,18 @@ test("procédural : bibliothèque, les sons du MJ ne remplacent pas les modèles
   assert.equal(getPatch("fire").builtin, true);
   setCustomPatches({});
   assert.equal(getPatch("my-a"), null);
+});
+
+
+
+test("procédural : couches « seulement de près »", () => {
+  assert.equal(nearFactor(0, 50), 1, "near = 0 : toujours");
+  assert.equal(nearFactor(1, 0), 1);
+  assert.equal(nearFactor(1, 1), 0);
+  assert.equal(nearFactor(1, 3), 0);
+  assert.equal(nearFactor(1, Infinity), 0, "sans source (paysage sonore) : muet");
+  assert.ok(Math.abs(nearFactor(1, 0.5) - 0.25) < 1e-9, "monte vite en s'approchant");
+  const fire = normalizePatch(BUILTIN_PATCHES.fire);
+  assert.equal(fire.layers.find((l) => l.id === "roar").near, 1);
+  assert.equal(fire.layers.find((l) => l.id === "crackle").near, 0);
 });

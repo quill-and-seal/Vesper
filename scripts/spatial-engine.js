@@ -306,9 +306,14 @@ export class SpatialEngine {
       if (!entry.voice) {
         const player = createSynth(this.out.ctx, patchId);
         player.setIntensity(intensity);
+        player.setDistance(best.d / this.metrics.size);
         entry.voice = new Voice(this.out, player, { panning: setting("panning", "hrtf") });
         entry.voice.set({ ...best, smooth: 0.25 });
-      } else entry.voice.player?.setIntensity(intensity);
+      } else {
+        entry.voice.player?.setIntensity(intensity);
+        // Distance en cases : les couches « tout près » (le grondement du feu) ne s'entendent que collé à la source
+        entry.voice.player?.setDistance(best.d / this.metrics.size);
+      }
       entry.last = best;
       entry.voice.set(best);
       return;

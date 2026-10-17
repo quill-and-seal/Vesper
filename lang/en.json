@@ -368,7 +368,12 @@
         "wind": "Ember's wind",
         "rain": "Ember's rain",
         "tension": "Tension"
-      }
+      },
+      "Near": "Only up close",
+      "Cells": "squares",
+      "NearHint": "The layer is only heard within this distance of the source, louder as you get closer (a fire's roar). 0: always.",
+      "PreviewDistance": "Listening distance",
+      "PreviewDistanceHint": "To try « only up close » layers. In the soundscape these layers stay silent (no source)."
     }
   }
 }

@@ -75,6 +75,8 @@ Un son procédural est **calculé en direct** au lieu d'être lu dans un fichier
 | Oscillateur | nappes, bourdons, sons magiques |
 | Événements | crépitements, gouttes, chants d'insectes, battements, pas lointains |
 
+Une couche peut être réservée au **tout près** (réglage « Seulement de près », en cases) : le grondement du feu ne s'entend que collé aux flammes, les crépitements portent plus loin. Le curseur **Distance d'écoute** de l'atelier permet de l'essayer.
+
 Chaque couche passe dans des **filtres** (passe-bas, passe-haut, passe-bande…), et ses paramètres peuvent **osciller** ou **vaciller au hasard** (modulations). Le bouton graphique à côté d'un nombre le lie à l'**intensité** : une valeur au calme, une au maximum.
 
 - Les modèles livrés s'écoutent mais ne se modifient pas : **Dupliquer**, puis modifier la copie.

@@ -73,6 +73,8 @@ export class Workshop extends ApplicationV2 {
     this.engine = engine;
     this.patchId = options.patchId ?? "fire";
     this.previewIntensity = null;
+    // Distance d'écoute (cases) : loin par défaut, comme la plupart du temps en jeu
+    this.previewDistance = 3;
     this.player = null;
     this.previewGain = null;
     this.#saveTimer = null;
@@ -152,6 +154,14 @@ export class Workshop extends ApplicationV2 {
       this.player?.setIntensity(this.previewIntensity);
     });
     slider?.addEventListener("change", (ev) => ev.stopPropagation());
+    const dist = root.querySelector(".vw-preview-distance");
+    dist?.addEventListener("input", (ev) => {
+      ev.stopPropagation();
+      this.previewDistance = Number(dist.value);
+      dist.nextElementSibling.textContent = `${this.previewDistance.toFixed(1)} ${t("Workshop.Cells")}`;
+      this.player?.setDistance(this.previewDistance);
+    });
+    dist?.addEventListener("change", (ev) => ev.stopPropagation());
   }
 
   /** Ateliers ouverts (rafraîchis quand la bibliothèque change). */
@@ -181,6 +191,12 @@ export class Workshop extends ApplicationV2 {
         ? `<i class="fa-solid fa-chart-line vw-link active"></i>`
         : "";
     return `<label class="vw-field ${pair ? "is-pair" : ""}" ${hint ? `data-tooltip="${esc(hint)}"` : ""}><span>${esc(label)}${unit ? ` <small>${esc(unit)}</small>` : ""}</span><span class="vw-inputs">${fields}${link}</span></label>`;
+  }
+
+  /** Nombre simple (ne suit jamais l'intensité). */
+  #plain(label, name, value, { min = 0, max = 1, step = 0.01, unit = "", hint = "" } = {}) {
+    const dis = this.editable ? "" : "disabled";
+    return `<label class="vw-field" ${hint ? `data-tooltip="${esc(hint)}"` : ""}><span>${esc(label)}${unit ? ` <small>${esc(unit)}</small>` : ""}</span><span class="vw-inputs"><input type="number" name="${name}" value="${Number(value)}" min="${min}" max="${max}" step="${step}" ${dis}></span></label>`;
   }
 
   #sel(label, name, values, value, prefix) {
@@ -280,6 +296,7 @@ export class Workshop extends ApplicationV2 {
         <div class="vw-grid">
           ${this.#num(t("Workshop.Gain"), `layers.${p}.gain`, l.gain, { min: 0, max: 4, step: 0.01 })}
           ${this.#num(t("Workshop.Pan"), `layers.${p}.pan`, l.pan, { min: -1, max: 1, step: 0.05 })}
+          ${this.#plain(t("Workshop.Near"), `layers.${p}.near`, l.near ?? 0, { min: 0, max: 10, step: 0.25, unit: t("Workshop.Cells"), hint: t("Workshop.NearHint") })}
         </div>
         <div class="vw-subtitle">${t("Workshop.FiltersTitle")} ${this.editable && l.filters.length < LIMITS.filters ? `<a data-action="addFilter" data-index="${i}"><i class="fa-solid fa-plus"></i></a>` : ""}</div>
         ${filters || `<p class="notes">${t("Workshop.NoFilter")}</p>`}
@@ -322,6 +339,7 @@ export class Workshop extends ApplicationV2 {
           ${p.builtin ? "" : `<button type="button" data-action="deletePatch" data-tooltip="${esc(t("Workshop.Delete"))}"><i class="fa-solid fa-trash"></i></button>`}` : ""}
         </div>
         <label class="vw-preview"><span>${t("Workshop.PreviewIntensity")}</span><input type="range" class="vw-preview-intensity" min="0" max="1" step="0.01" value="${intensity}"><output>${Math.round(intensity * 100)} %</output></label>
+        <label class="vw-preview" data-tooltip="${esc(t("Workshop.PreviewDistanceHint"))}"><span>${t("Workshop.PreviewDistance")}</span><input type="range" class="vw-preview-distance" min="0" max="10" step="0.05" value="${this.previewDistance}"><output>${this.previewDistance.toFixed(1)} ${t("Workshop.Cells")}</output></label>
         ${banner}
         <div class="vw-grid">
           <label class="vw-field"><span>${t("Workshop.Name")}</span><input type="text" name="label" value="${esc(p.builtin ? patchLabel(this.patchId) : p.label)}" ${dis}></label>
@@ -358,6 +376,7 @@ export class Workshop extends ApplicationV2 {
     }
     this.player = new PatchPlayer(ctx, this.patch);
     this.player.setIntensity(this.previewIntensity ?? this.patch.fixed);
+    this.player.setDistance(this.previewDistance);
     this.player.output.connect(this.previewGain);
   }
 

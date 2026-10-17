@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT ?? "playwright-core");
 
-const [outDir = "renders", ids = "", intens = "", secs = "12"] = process.argv.slice(2);
+const [outDir = "renders", ids = "", intens = "", secs = "12", dist = ""] = process.argv.slice(2);
 const root = resolve(new URL("..", import.meta.url).pathname);
 const types = { ".js": "text/javascript", ".html": "text/html" };
 const server = createServer(async (req, res) => {
@@ -25,7 +25,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME, args
 const page = await browser.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
-const q = new URLSearchParams({ s: secs, ...(ids ? { ids } : {}), ...(intens ? { i: intens } : {}) });
+const q = new URLSearchParams({ s: secs, ...(ids ? { ids } : {}), ...(intens ? { i: intens } : {}), ...(dist ? { d: dist } : {}) });
 await page.goto(`http://localhost:${server.address().port}/tools/render.html?${q}`);
 const done = await page.waitForFunction(() => window.__done, null, { timeout: 300000 }).then((h) => h.jsonValue());
 await browser.close();

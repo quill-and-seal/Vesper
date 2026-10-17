@@ -9,6 +9,7 @@
   const seconds = Number(params.get("s") ?? 12);
   const ids = (params.get("ids") ?? BUILTIN_IDS.join(",")).split(",");
   const intensities = (params.get("i") ?? "").split(",").filter(Boolean).map(Number);
+  const distance = params.has("d") ? Number(params.get("d")) : Infinity;
 
   function wav(buffer) {
     const ch = buffer.numberOfChannels, len = buffer.length, sr = buffer.sampleRate;
@@ -52,6 +53,7 @@
         const patch = getPatch(id);
         const player = new PatchPlayer(ctx, patch, { timers: false });
         if (i !== null) player.setIntensity(i);
+        player.setDistance(distance);
         player.output.connect(ctx.destination);
         // Programmation par tranches, comme en direct (l'intensité est stable ici)
         for (let t = 0; t < seconds; t += 0.4) player.schedule(t + 0.4);

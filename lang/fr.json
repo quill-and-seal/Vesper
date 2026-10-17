@@ -368,7 +368,12 @@
         "wind": "Le vent d'Ember",
         "rain": "La pluie d'Ember",
         "tension": "La tension"
-      }
+      },
+      "Near": "Seulement de près",
+      "Cells": "cases",
+      "NearHint": "La couche ne s'entend qu'à moins de cette distance de la source, et monte quand on s'approche (le grondement d'un feu). 0 : toujours.",
+      "PreviewDistance": "Distance d'écoute",
+      "PreviewDistanceHint": "Pour essayer les couches « seulement de près ». Dans le paysage sonore, ces couches restent muettes (pas de source)."
     }
   }
 }

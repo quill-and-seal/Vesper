@@ -57,6 +57,17 @@ function noiseBuffer(ctx, color) {
   return b;
 }
 
+/**
+ * Part d'une couche « de près » selon la distance : 1 collé à la source, 0 au-delà de « near » cases.
+ * near = 0 : la couche s'entend toujours.
+ */
+export function nearFactor(near, cells) {
+  if (!(near > 0)) return 1;
+  if (!Number.isFinite(cells) || cells >= near) return 0;
+  const x = 1 - cells / near;
+  return x * x;
+}
+
 /* -------------------------------------------- */
 /*  Lecteur                                     */
 /* -------------------------------------------- */
@@ -74,6 +85,8 @@ export class PatchPlayer {
     this.patch = patch;
     this.rand = random;
     this.intensity = patch?.fixed ?? 0.5;
+    // Distance à la source, en cases. Inconnue (paysage sonore) : loin, les couches « de près » se taisent.
+    this.distance = Infinity;
     this.output = ctx.createGain();
     this.output.gain.value = dbToGain(Number(patch?.volume) || 0);
     this.nodes = [];
@@ -91,6 +104,25 @@ export class PatchPlayer {
     this.#apply(false);
   }
 
+  /**
+   * Distance de l'auditeur à la source (cases). Les couches réservées au tout près (réglage « near »)
+   * montent quand on s'approche et se taisent au-delà.
+   */
+  setDistance(cells) {
+    const d = Number.isFinite(cells) ? Math.max(0, cells) : Infinity;
+    if (Math.abs(d - this.distance) < 0.02 || (d === Infinity && this.distance === Infinity)) return;
+    this.distance = d;
+    let changed = false;
+    for (const rt of this.layers) {
+      const f = nearFactor(rt.layer.near, d);
+      if (Math.abs(f - rt.near) > 0.005) {
+        rt.near = f;
+        changed = true;
+      }
+    }
+    if (changed) this.#apply(false, 0.12);
+  }
+
   #keep(node) {
     this.nodes.push(node);
     return node;
@@ -98,7 +130,7 @@ export class PatchPlayer {
 
   #build(layer) {
     const ctx = this.ctx;
-    const rt = { layer, filters: [], mods: [], src: null, osc: null, nextEvent: ctx.currentTime + 0.02 + this.rand() * 0.2 };
+    const rt = { layer, near: nearFactor(layer.near, this.distance), filters: [], mods: [], src: null, osc: null, nextEvent: ctx.currentTime + 0.02 + this.rand() * 0.2 };
     rt.gain = this.#keep(ctx.createGain());
     rt.gain.gain.value = 0;
     rt.panner = ctx.createStereoPanner ? this.#keep(ctx.createStereoPanner()) : null;
@@ -158,7 +190,7 @@ export class PatchPlayer {
   #base(rt, target) {
     const l = rt.layer;
     const i = this.intensity;
-    if (target === "gain") return pval(l.gain, i);
+    if (target === "gain") return pval(l.gain, i) * rt.near;
     if (target === "pan") return pval(l.pan, i);
     if (target === "source.freq") return pval(l.source.freq, i);
     if (target === "source.rate") return pval(l.source.rate, i);
@@ -178,7 +210,7 @@ export class PatchPlayer {
   }
 
   /** Applique les valeurs de base (intensité changée, ou démarrage). */
-  #apply(initial) {
+  #apply(initial, tc = 0.6) {
     const t = this.ctx.currentTime;
     for (const rt of this.layers) {
       for (const target of ["gain", "pan", "source.freq", ...rt.filters.flatMap((_, i) => [`filters.${i}.freq`, `filters.${i}.q`])]) {
@@ -187,7 +219,7 @@ export class PatchPlayer {
         let v = this.#base(rt, target) * this.#factor(rt, target);
         if (target === "pan") v = Math.max(-1, Math.min(1, this.#base(rt, target) + (this.#factor(rt, target) - 1)));
         if (initial && target !== "gain") p.value = v;
-        else p.setTargetAtTime(v, t, initial ? 0.15 : 0.6);
+        else p.setTargetAtTime(v, t, initial ? 0.15 : tc);
       }
     }
   }
@@ -284,7 +316,8 @@ export class PatchPlayer {
     const fMin = pval(s.freqMin, i);
     const fMax = pval(s.freqMax, i);
     const freq = fMin + (fMax - fMin) * this.rand();
-    const amp = eventAmp(pval(s.ampMin, i), pval(s.ampMax, i), pval(s.skew, i), this.rand()) * scale;
+    const amp = eventAmp(pval(s.ampMin, i), pval(s.ampMax, i), pval(s.skew, i), this.rand()) * scale * rt.near;
+    if (amp <= 0) return;
     const decay = Math.max(0.0001, pval(s.decay, i) / 1000) * (0.7 + 0.6 * this.rand());
     const end = at + decay * 10 + 0.005;
 

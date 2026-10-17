@@ -158,6 +158,8 @@ function cleanLayer(l, i) {
     })),
     gain: num(l?.gain, 0.5, 0, 4),
     pan: num(l?.pan, 0, -1, 1),
+    // Seulement de près : la couche ne s'entend qu'à moins de « near » cases de la source (0 = toujours)
+    near: Math.round(num(pval(l?.near, 0), 0, 0, 10) * 100) / 100,
     mods: []
   };
   const targets = modTargets(layer);
@@ -222,7 +224,8 @@ export const BUILTIN_PATCHES = {
     layers: [
       {
         id: "roar",
-        label: "Grondement",
+        label: "Grondement (tout près)",
+        near: 1,
         source: { type: "noise", color: "brown" },
         filters: [{ type: "highpass", freq: 40, q: 0.7 }, { type: "lowpass", freq: r(160, 300), q: 0.7 }, { type: "lowpass", freq: r(160, 300), q: 0.7 }],
         gain: r(0.08, 0.2),
@@ -256,7 +259,8 @@ export const BUILTIN_PATCHES = {
     layers: [
       {
         id: "flame",
-        label: "Flamme",
+        label: "Flamme (tout près)",
+        near: 0.6,
         source: { type: "noise", color: "brown" },
         filters: [{ type: "highpass", freq: 60, q: 0.7 }, { type: "lowpass", freq: r(220, 420), q: 0.8 }, { type: "lowpass", freq: r(220, 420), q: 0.7 }],
         gain: r(0.1, 0.25),

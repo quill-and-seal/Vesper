@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Couches « seulement de près » : une couche d'un son procédural peut ne s'entendre qu'à moins d'une certaine distance de la source, et monte quand on s'approche.
+- Feu de camp et torche : le grondement ne s'entend plus que collé au feu (moins d'une case pour le feu, un peu plus d'une demi-case pour la torche) ; de plus loin, seuls les crépitements restent.
+- Atelier sonore : réglage « Seulement de près » par couche et curseur « Distance d'écoute » pour l'essayer.
+
 ## 0.2.1
 
 - Vesper a sa propre case dans la barre de gauche (icône d'oreille), avec le paysage sonore et l'atelier sonore ; le groupe Sons de Foundry n'est plus modifié.
