@@ -7,6 +7,7 @@
 - Sons procéduraux posés sur la carte : « Son procédural » dans la fenêtre d'un son d'ambiance, avec distance, murs et réverbération ; intensité automatique (vent, pluie, tension) ou fixée.
 - Atelier sonore : créer, dupliquer, écouter en direct et partager ses propres sons.
 - Modèle de paysage « Campement » ; la forêt et le donjon utilisent les grillons et les gouttes générés.
+- D'autres changement à venir.
 
 ## 0.1.0
 
