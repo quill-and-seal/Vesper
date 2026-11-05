@@ -281,6 +281,50 @@
     await Hooks.call("renderAmbientSoundConfig", { document: T.makeSound("cfg", 0, 0), setPosition() {} }, fakeHtml);
     log("soundConfig", [...fakeHtml.querySelectorAll(".vesper-sound-config input")].map((i) => i.name));
 
+    // O. Lien avec Ember : sources fournies, flamme soufflée, tonnerre, pluie et vent automatiques
+    {
+      const check = (ok, msg) => { if (!ok) throw new Error(`Ember : ${msg}`); };
+      let lit = true;
+      api.setSoundProvider("ember-particles", () => [{ id: "fire1", x: 150, y: 0, patch: "fire", radius: 10, volume: 0.6, intensity: 0.6, audible: lit }]);
+      await sleep(1200);
+      const emberFire = spatial.describe().voices.find((v) => v.id === "ember-particles:fire1");
+      const emberHeard = await dry(1000);
+      check(!!emberFire, "le feu d'Ember a sa voix");
+      lit = false;
+      await sleep(1500);
+      const afterOut = spatial.describe().voices.find((v) => v.id === "ember-particles:fire1");
+      check(!afterOut, "flamme soufflée : la voix se tait");
+      spatial.refreshSounds();
+      api.setSoundProvider("ember-particles", null);
+      await sleep(300);
+      // Bouffée et vapeur, positionnées
+      await Hooks.call("emberExtinguish", { x: 100, y: 0, reason: "wind" });
+      await Hooks.call("emberExtinguish", { x: 100, y: 0, reason: "rain" });
+      check(spatial.oneShots.size >= 1, "bouffée jouée");
+      // Tonnerre : même éclair, même son pour tous
+      const a = api.thunder({ time: 123456789, level: 1 });
+      const b = api.thunder({ time: 123456789, level: 1 });
+      check(a && b && a.delay === b.delay && a.distance === b.distance, "tonnerre déterministe");
+      // Pluie et vent automatiques
+      await api.setSoundscape({ layers: [] });
+      T.scene.flags["ember-particles"] = { weather: { kind: "rain", intensity: 0.8 }, wind: { enabled: true, strength: 60 } };
+      soundscape.sync();
+      await sleep(400);
+      const autoLayers = soundscape.describe().layers.filter((l) => l.id.startsWith("ember:"));
+      check(autoLayers.length === 2 && autoLayers.every((l) => l.active), `pluie et vent d'Ember jouent tout seuls`);
+      await api.setSoundscape({ layers: [{ id: "my-rain", kind: "synth", synth: "rain" }] });
+      soundscape.sync();
+      check(!soundscape.describe().layers.some((l) => l.id === "ember:rain"), "une couche de pluie du MJ remplace la pluie automatique");
+      await game.settings.set("vesper-audio", "emberSounds", false);
+      soundscape.sync();
+      check(!soundscape.describe().layers.some((l) => l.id.startsWith("ember:")), "réglage « Sons d'Ember » décoché : rien d'automatique");
+      await game.settings.set("vesper-audio", "emberSounds", true);
+      T.scene.flags["ember-particles"] = {};
+      await api.setSoundscape({ layers: [] });
+      soundscape.sync();
+      log("ember", { emberHeard, autoLayers: autoLayers.map((l) => l.id), thunder: a });
+    }
+
     // N. Case Vesper dans la barre de gauche
     const controls = { tokens: { order: 0, tools: {} }, sounds: { order: 9, tools: {} } };
     await Hooks.call("getSceneControlButtons", controls);

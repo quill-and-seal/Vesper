@@ -105,9 +105,17 @@ Chaque couche passe dans des **filtres** (passe-bas, passe-haut, passe-bande…)
 - Les sons de l'atelier sont enregistrés dans le monde et **partagés avec tous les joueurs**. Modifier un son relance tous ceux qui le jouent.
 - Des limites protègent les navigateurs des joueurs : 8 couches, 4 filtres et 4 modulations par couche, 60 événements par seconde.
 
+## 5. Avec Ember
+
+Avec [Ember](https://github.com/quill-and-seal/Ember) (effets de particules) actif, Vesper entend ses effets, sans rien régler (réglage du monde **Sons d'Ember**, coché par défaut) :
+
+- **Feux, torches, bougies, braises** crépitent là où ils brûlent, avec distance, murs et réverbération. Le crépitement monte quand le vent d'Ember attise la flamme, faiblit quand elle vacille, et se tait quand elle est soufflée : une petite bouffée, ou un sifflement de vapeur si c'est la pluie. Le son de chaque émetteur se choisit dans sa fenêtre d'Ember (section **Son**) : le son de l'effet, aucun, ou n'importe quel son de Vesper, avec un bouton qui l'ouvre dans l'atelier.
+- **Pluie et vent** de la météo d'Ember jouent tout seuls, étouffés à l'intérieur des Régions isolées. Une couche du même son posée dans le paysage sonore les remplace (pour régler leur volume ou leurs conditions).
+- **Tonnerre** après chaque éclair : proche, il claque presque tout de suite ; lointain, il gronde plus tard, plus sourd. Tous les joueurs l'entendent au même moment, du même côté.
+
 ## Réglages
 
-**Monde (MJ)** : Vesper joue les sons d'ambiance, réalisme de l'atténuation, absorption de l'air, perte des murs pleins / portes / murs limités, lieu acoustique par défaut, écoute du MJ sans token.
+**Monde (MJ)** : Vesper joue les sons d'ambiance, réalisme de l'atténuation, absorption de l'air, perte des murs pleins / portes / murs limités, lieu acoustique par défaut, écoute du MJ sans token, sons d'Ember.
 
 **Chaque joueur** : spatialisation (HRTF au casque, stéréo simple, désactivée), précision des murs, volumes de Vesper, des sons posés, du paysage sonore et de la réverbération, paysage sonore activé. Le curseur **Ambiance** de Foundry s'applique aussi à Vesper.
 
@@ -133,6 +141,12 @@ vesper.describe();
 vesper.allPatches();                 // modèles et sons de l'atelier
 vesper.openWorkshop("fire");
 await vesper.savePatch("my-forge", { label: "Forge", layers: [/* … */] });
+
+// Sources sonores d'un autre module, sans document (recalculées à chaque pas, sur chaque client)
+vesper.setSoundProvider("mon-module", () => [{ id: "a", x: 1200, y: 800, patch: "fire", radius: 8, volume: 0.5, audible: true }]);
+// Sons fabriqués, sur ce client : bouffée de flamme soufflée, vapeur, tonnerre (heure serveur de l'éclair)
+vesper.playEffect("puff", { x: 1200, y: 800 });
+vesper.thunder({ time: game.time.serverTime });
 ```
 
 ## Développement

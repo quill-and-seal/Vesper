@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0
+
+Lien avec **Ember** (effets de particules), sans dépendance : tout s'active quand les deux modules sont là (réglage du monde « Sons d'Ember », coché par défaut).
+
+- **Les flammes d'Ember s'entendent** : feu de camp, torche, bougie et braises crépitent là où elles brûlent, avec distance, murs et réverbération. Le crépitement monte quand le vent attise la flamme et se tait quand il la souffle. Le son se choisit dans la fenêtre de l'émetteur d'Ember (son de l'effet, aucun, ou n'importe quel son de Vesper), avec un bouton qui l'ouvre dans l'atelier.
+- **Flamme soufflée** : petite bouffée (« fffh ») ; éteinte par la pluie : sifflement de vapeur. Sons fabriqués, sans fichier.
+- **Pluie et vent automatiques** : la pluie et le vent de la météo d'Ember s'entendent sans rien régler, étouffés à l'intérieur des Régions isolées. Une couche du même son posée par le MJ dans le paysage sonore les remplace. Ils apparaissent dans l'onglet Ambiance du panneau.
+- **Tonnerre** après chaque éclair d'Ember, fabriqué à la volée : proche, il claque presque tout de suite ; lointain, il gronde plus tard et plus sourd. Même coup de tonnerre, au même moment et du même côté, pour tous les joueurs.
+- API pour les autres modules : `setSoundProvider(name, fn)` (sources sonores sans document), `playEffect("puff" | "steam", point)`, `thunder({ time })`, `patchLabel(id)`. Hooks écoutés : `emberLightning`, `emberExtinguish`.
+
 ## 0.4.0
 
 - Nouvelle interface : un seul **panneau Vesper**, ancré à droite ou détachable (glisser sa barre de titre). En haut : la tension et la carte du son. Trois onglets :

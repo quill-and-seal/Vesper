@@ -72,6 +72,10 @@
       "soundscape": {
         "Name": "Paysage sonore",
         "Hint": "Décocher pour ne plus entendre les couches d'ambiance (sur cet ordinateur)."
+      },
+      "emberSounds": {
+        "Name": "Sons d'Ember",
+        "Hint": "Avec Ember actif : les feux, torches et bougies d'Ember crépitent là où ils sont, la pluie et le vent de sa météo s'entendent sans rien régler (une couche du même son dans le paysage sonore les remplace), et le tonnerre suit ses éclairs."
       }
     },
     "Place": {
@@ -468,6 +472,13 @@
       "Back": "Retour",
       "Always": "Toujours",
       "DropHint": "Lâche le son à l'endroit voulu"
+    },
+    "Ember": {
+      "Layer": {
+        "rain": "Pluie d'Ember",
+        "wind": "Vent d'Ember"
+      },
+      "LayerHint": "Automatique (réglage « Sons d'Ember »)"
     }
   }
 }

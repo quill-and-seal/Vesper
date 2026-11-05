@@ -3,7 +3,7 @@
  * Point d'entrée : réglages, hooks, socket et API publique.
  */
 
-import { MODULE_ID, SOCKET, log, t } from "./constants.js";
+import { MODULE_ID, SOCKET, log, t, setting } from "./constants.js";
 import { AudioOutput } from "./audio/output.js";
 import { SpatialEngine, isManaged } from "./spatial-engine.js";
 import { Soundscape, readSoundscape, writeSoundscape } from "./soundscape.js";
@@ -13,6 +13,9 @@ import { SoundscapeConfig, openApps, injectAmbientSoundConfig, TEMPLATES } from 
 import { REVERB_PRESETS } from "./audio/reverb-presets.js";
 import { SYNTH_TYPES } from "./audio/synth.js";
 import { setCustomPatches, getPatch, allPatches, customPatches, normalizePatch } from "./patches.js";
+import { setSoundProvider } from "./providers.js";
+import { puffSamples, toBuffer } from "./audio/oneshots.js";
+import { hashString } from "./audio/reverb-presets.js";
 import { Workshop } from "./workshop.js";
 import { createVesperLayerClass, LAYER_NAME } from "./layer.js";
 import { VesperPanel } from "./panel.js";
@@ -79,6 +82,8 @@ Hooks.once("init", () => {
     choices: Object.fromEntries(Object.keys(REVERB_PRESETS).map((k) => [k, `VESPER.Place.${k}`]))
   });
   world("gmListener", String, "camera", { choices: { camera: "VESPER.Settings.gmListener.Camera", none: "VESPER.Settings.gmListener.None" } });
+  // Lien avec Ember : sons des flammes, pluie et vent automatiques, tonnerre après les éclairs
+  world("emberSounds", Boolean, true);
 
   client("panning", String, "hrtf", {
     choices: { hrtf: "VESPER.Settings.panning.Hrtf", stereo: "VESPER.Settings.panning.Stereo", off: "VESPER.Settings.panning.Off" }
@@ -160,9 +165,42 @@ Hooks.once("init", () => {
       map[id] = clean;
       await game.settings.set(MODULE_ID, "patches", map);
     },
-    describe: () => ({ ...spatial.describe(), soundscape: soundscape.describe() })
+    describe: () => ({ ...spatial.describe(), soundscape: soundscape.describe(), providers: spatial.external?.length ?? 0 }),
+    /** Nom affichable d'un son procédural (modèle livré ou son de l'atelier). */
+    patchLabel: (id) => patchLabel(id),
+    /**
+     * Sources sonores fournies par un autre module (Ember…), recalculées à chaque pas sur chaque client.
+     * fn() renvoie [{ id, x, y, patch, radius (cases), volume, intensity, size, directional, walls, audible }].
+     * null retire le fournisseur. Voir providers.js.
+     */
+    setSoundProvider: (name, fn) => setSoundProvider(name, fn),
+    /**
+     * Son ponctuel fabriqué, joué sur ce client seulement (chaque client le déclenche lui-même) :
+     * "puff" (flamme soufflée), "steam" (flamme éteinte par la pluie).
+     */
+    playEffect: (kind, origin, options = {}) => playEffect(kind, origin, options),
+    /** Coup de tonnerre après un éclair, sur ce client (heure serveur de l'éclair). */
+    thunder: (flash = {}) => soundscape.thunder(flash)
   };
 });
+
+/** Nom affichable d'un son procédural. */
+function patchLabel(id) {
+  const p = getPatch(id);
+  if (!p) return id;
+  if (p.label) return p.label;
+  const key = `VESPER.Synth.${id}`;
+  return game.i18n.has?.(key) ? game.i18n.localize(key) : id;
+}
+
+/** Sons ponctuels fabriqués (aucun fichier), positionnés, sur ce client. */
+function playEffect(kind, origin, { volume = 0.6, radiusCells = 8 } = {}) {
+  if (!setting("emberSounds", true) || !out.ctx || !origin) return null;
+  if (kind !== "puff" && kind !== "steam") return null;
+  const seed = hashString(`${kind}|${Math.round(origin.x)}|${Math.round(origin.y)}|${Math.floor(Date.now() / 1000)}`);
+  const buffer = toBuffer(out.ctx, puffSamples(out.ctx.sampleRate, seed, kind));
+  return spatial.playBuffer(buffer, origin, { volume, radiusCells });
+}
 
 /* -------------------------------------------- */
 /*  Son ponctuel pour tous (socket)             */
@@ -361,6 +399,11 @@ for (const hook of ["combatStart", "updateCombat", "deleteCombat"]) {
     refreshApps();
   });
 }
+
+// Ember : tonnerre après un éclair, bouffée quand une flamme est soufflée, vapeur quand la pluie l'éteint.
+// Ember déclenche ces hooks sur chaque client au même moment (heure du serveur) : rien ne passe par le réseau.
+Hooks.on("emberLightning", (flash) => soundscape.thunder(flash));
+Hooks.on("emberExtinguish", (e) => playEffect(e?.reason === "rain" ? "steam" : "puff", e, { volume: e?.volume ?? 0.6 }));
 
 // Fenêtre d'un son d'ambiance : réglages Vesper
 Hooks.on("renderAmbientSoundConfig", (app, html) => injectAmbientSoundConfig(app, html));

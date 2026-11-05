@@ -18,7 +18,42 @@ import { hashString } from "./audio/reverb-presets.js";
 import { createSynth } from "./audio/synth.js";
 import { getPatch, patchIntensity, patchSignature } from "./patches.js";
 import { Voice } from "./audio/voice.js";
-import { readDarkness, readCombat, readWeather, readWind } from "./world.js";
+import { readDarkness, readCombat, readWeather, readWind, emberActive } from "./world.js";
+import { thunderSamples, toBuffer } from "./audio/oneshots.js";
+
+/**
+ * Couches automatiques quand Ember est actif (réglage « Sons d'Ember ») : la pluie et le vent
+ * de la météo d'Ember s'entendent sans rien régler. Une couche du même son posée par le MJ
+ * dans le paysage sonore les remplace.
+ */
+export const EMBER_LAYERS = [
+  { id: "ember:rain", label: "Ember — pluie", kind: "synth", synth: "rain", volume: -9, fade: 4, outdoor: true, auto: "rain" },
+  { id: "ember:wind", label: "Ember — vent", kind: "synth", synth: "wind", volume: -15, fade: 4, outdoor: true, auto: "wind" }
+];
+
+/** Couches automatiques d'Ember à ajouter, selon celles que le MJ a déjà posées. */
+export function emberLayersFor(layers, enabled) {
+  if (!enabled) return [];
+  const has = new Set(layers.filter((l) => l.kind === "synth").map((l) => l.synth));
+  return EMBER_LAYERS.filter((l) => !has.has(l.synth)).map((l) => ({ ...normalizeLayer(l), auto: l.auto }));
+}
+
+/** Une couche automatique doit-elle jouer ? Pluie : quand il pleut ; vent : dès qu'il souffle. */
+export function emberLayerActive(auto, state) {
+  if (auto === "rain") return state.weather === "rain" || state.weather === "storm";
+  if (auto === "wind") return (state.wind ?? 0) > 0.03;
+  return true;
+}
+
+/**
+ * Délai et distance d'un coup de tonnerre, tirés de l'heure de l'éclair : les mêmes pour tous.
+ * Un éclair proche gronde presque tout de suite et claque ; un éclair lointain gronde plus tard, sourd.
+ */
+export function thunderFor(time) {
+  const h = hashString(`thunder|${Math.round(time)}`);
+  const distance = (h % 1000) / 1000;
+  return { seed: h, distance, delay: 0.25 + distance * 2.8 };
+}
 
 /** Avance de programmation des sons dispersés (ms). */
 const LOOKAHEAD = 1500;
@@ -68,12 +103,14 @@ export class Soundscape {
       this.sceneId = canvas.scene.id;
     }
     this.data = readSoundscape();
-    const wanted = new Map(this.data.layers.map((l) => [l.id, l]));
+    const auto = emberLayersFor(this.data.layers, emberActive() && setting("emberSounds", true));
+    const all = [...this.data.layers, ...auto];
+    const wanted = new Map(all.map((l) => [l.id, l]));
     for (const [id, rt] of this.layers) {
       const l = wanted.get(id);
       if (!l || sourceSignature(l) !== rt.signature) this.#remove(id, rt.layer.fade);
     }
-    for (const l of this.data.layers) {
+    for (const l of all) {
       const rt = this.layers.get(l.id);
       if (rt) rt.layer = l;
       else this.layers.set(l.id, this.#create(l));
@@ -157,7 +194,7 @@ export class Soundscape {
 
     for (const rt of this.layers.values()) {
       const l = rt.layer;
-      const active = enabled && l.enabled !== false && conditionsMatch(l.when, state);
+      const active = enabled && l.enabled !== false && conditionsMatch(l.when, state) && (!l.auto || emberLayerActive(l.auto, state));
       const fade = Math.max(0.1, Number(l.fade) || 0);
 
       // Étouffement des couches extérieures quand on est à l'intérieur
@@ -252,6 +289,30 @@ export class Soundscape {
         v.start(this.out.now + Math.max(0, delay), 0);
       });
     }
+  }
+
+  /**
+   * Coup de tonnerre après un éclair d'Ember (appelé sur chaque client au même instant).
+   * Il vient d'une direction tirée de l'heure de l'éclair, et devient sourd à l'intérieur.
+   * @param {{time:number, level?:number}} flash  heure (serveur) de l'éclair
+   */
+  thunder({ time, level = 1 } = {}) {
+    if (!this.out.ctx || !setting("emberSounds", true) || !setting("soundscape", true)) return;
+    const { seed, distance, delay } = thunderFor(time ?? Date.now());
+    const buffer = toBuffer(this.out.ctx, thunderSamples(this.out.ctx.sampleRate, seed, distance));
+    const state = this.state ?? this.readState();
+    const muffle = state.isolation ?? 0;
+    const pan = ((seed >>> 8) % 200) / 100 - 1;
+    const v = new Voice(this.out, buffer, { loop: false, panning: "stereo", bus: this.out.bedBus });
+    v.set({
+      gain: Math.min(1, 0.55 + 0.45 * level) * (1 - 0.5 * distance) * dbToGain(Number(this.data.volume) || 0) * dbToGain(-14 * muffle),
+      cutoff: Math.max(300, (distance > 0.6 ? 2500 : 9000) * (1 - 0.9 * muffle)),
+      send: 0.3 + 0.4 * distance,
+      dir: { x: pan, y: 0, z: 0, pan },
+      smooth: 0.001
+    });
+    v.start(this.out.now + delay, 0);
+    return { delay, distance };
   }
 
   describe() {

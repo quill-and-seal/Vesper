@@ -325,3 +325,48 @@ test("bibliothèque : données du son posé", () => {
   assert.equal(libraryEntry({ path: "sounds/forge%20du%20village.ogg" }).name, "forge du village");
   assert.equal(libraryEntry({ patch: "inconnu" }), null);
 });
+
+/* -------------------------------------------- */
+/*  Lien avec Ember                             */
+/* -------------------------------------------- */
+
+import { normalizeSource } from "../scripts/providers.js";
+import { thunderSamples, puffSamples, thunderEnvelope } from "../scripts/audio/oneshots.js";
+
+test("Ember : source fournie complétée, sources invalides ignorées", () => {
+  const s = normalizeSource({ id: "f", x: 10, y: 20, patch: "fire" });
+  assert.equal(s.radius, 10);
+  assert.equal(s.volume, 0.5);
+  assert.equal(s.intensity, null);
+  assert.ok(s.directional && s.walls && s.audible);
+  assert.equal(normalizeSource({ id: "f", x: 10, y: 20 }), null, "ni son procédural ni fichier");
+  assert.equal(normalizeSource({ id: "f", x: "a", y: 0, patch: "fire" }), null);
+  assert.equal(normalizeSource({ id: "f", x: 0, y: 0, patch: "fire", intensity: 3 }).intensity, 1);
+});
+
+test("Ember : tonnerre et bouffée déterministes", () => {
+  const a = thunderSamples(8000, 42, 0.2);
+  const b = thunderSamples(8000, 42, 0.2);
+  assert.deepEqual(a, b, "même graine, même tonnerre");
+  assert.ok(a.length > 8000 * 4, "au moins 4 secondes");
+  assert.ok(Math.max(...a.map(Math.abs)) > 0.5, "audible");
+  const far = thunderSamples(8000, 42, 0.9);
+  assert.ok(far.length > a.length, "un tonnerre lointain roule plus longtemps");
+  assert.ok(thunderEnvelope(0.001, 5, 0.1, []) > thunderEnvelope(0.001, 5, 0.9, []), "claquement seulement de près");
+  const steam = puffSamples(8000, 7, "steam");
+  const puff = puffSamples(8000, 7, "puff");
+  assert.ok(steam.length > puff.length, "la vapeur siffle plus longtemps que la bouffée");
+});
+
+import { emberLayersFor, emberLayerActive, thunderFor } from "../scripts/soundscape.js";
+
+test("Ember : pluie et vent automatiques, remplacés par une couche du MJ", () => {
+  assert.deepEqual(emberLayersFor([], true).map((l) => l.id), ["ember:rain", "ember:wind"]);
+  assert.deepEqual(emberLayersFor([{ kind: "synth", synth: "wind" }], true).map((l) => l.id), ["ember:rain"]);
+  assert.equal(emberLayersFor([], false).length, 0);
+  assert.ok(emberLayerActive("rain", { weather: "storm" }) && !emberLayerActive("rain", { weather: "snow" }));
+  assert.ok(emberLayerActive("wind", { wind: 0.4 }) && !emberLayerActive("wind", { wind: 0 }));
+  const t = thunderFor(1000);
+  assert.deepEqual(thunderFor(1000), t);
+  assert.ok(t.delay >= 0.25 && t.delay <= 3.05);
+});

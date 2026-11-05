@@ -31,7 +31,7 @@ const TENSION_COLORS = ["#6fae6a", "#c9b458", "#d9822b", "#c0392b"];
 /** Réglages du module affichés derrière la roue dentée. */
 const SETTINGS_LAYOUT = [
   { title: "Walls", scope: "world", items: [["wallLoss", "slider", " dB"], ["doorLoss", "slider", " dB"], ["thinLoss", "slider", " dB"]] },
-  { title: "Propagation", scope: "world", items: [["realism", "slider", "%"], ["airAbsorption", "toggle"], ["takeover", "toggle"], ["gmListener", "choice"]] },
+  { title: "Propagation", scope: "world", items: [["realism", "slider", "%"], ["airAbsorption", "toggle"], ["takeover", "toggle"], ["gmListener", "choice"], ["emberSounds", "toggle"]] },
   { title: "Listening", scope: "client", items: [["masterVolume", "slider", "%"], ["spatialVolume", "slider", "%"], ["soundscapeVolume", "slider", "%"], ["reverbVolume", "slider", "%"], ["panning", "choice"], ["occlusionQuality", "choice"], ["soundscape", "toggle"]] }
 ];
 
@@ -441,6 +441,17 @@ export class VesperPanel extends ApplicationV2 {
         </div>`;
       })
       .join("");
+    // Couches automatiques d'Ember (pluie, vent) : pas d'interrupteur, le réglage « Sons d'Ember » les gère
+    const auto = this.engine.soundscape
+      .describe()
+      .layers.filter((l) => l.id.startsWith("ember:"))
+      .map(
+        (l) => `<div class="vp-layer">
+          <span class="vp-dot ${l.active ? "on" : ""}" role="img" aria-label="${esc(t(l.active ? "Layer.Playing" : "Layer.Silent"))}" data-tooltip="${esc(t(l.active ? "Layer.Playing" : "Layer.Silent"))}"></span>
+          <span class="vp-grow"><strong>${esc(t(`Ember.Layer.${l.id.slice(6)}`))}</strong><small>${esc(t("Ember.LayerHint"))}</small></span>
+        </div>`
+      )
+      .join("");
     const places = Object.keys(REVERB_PRESETS)
       .map((p) => `<option value="${p}" ${p === acoustics.place ? "selected" : ""}>${esc(t(`Place.${p}`))}</option>`)
       .join("");
@@ -448,7 +459,8 @@ export class VesperPanel extends ApplicationV2 {
       <div class="vp-chips">${chips}</div>
       <p class="vp-note">${t("Panel.StateHint")}</p>
       <h3 class="vp-h">${t("Panel.Layers")}</h3>
-      ${layers || `<p class="vp-note">${t("Soundscape.Empty")}</p>`}
+      ${layers || (auto ? "" : `<p class="vp-note">${t("Soundscape.Empty")}</p>`)}
+      ${auto}
       <button type="button" class="vp-dashed" data-action="editLayers">${icon("fa-solid fa-pen")} ${t("Panel.EditLayers")}</button>
       <label class="vp-stack">${t("Panel.ScenePlace")}<select data-field="scenePlace">${places}</select></label>`;
   }

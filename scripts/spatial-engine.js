@@ -16,6 +16,7 @@ import { computeGrid } from "./field.js";
 import { Voice } from "./audio/voice.js";
 import { createSynth, synthFromPath } from "./audio/synth.js";
 import { getPatch, patchIntensity, patchSignature } from "./patches.js";
+import { providerSources } from "./providers.js";
 import {
   readWalls,
   readMaterials,
@@ -132,6 +133,8 @@ export class SpatialEngine {
   refreshSounds() {
     const docs = new Map((canvas.scene?.sounds ?? []).map((d) => [d.id, d]));
     for (const [id, entry] of this.entries) {
+      // Sources d'autres modules (clé « module:id ») : gérées à chaque pas, pas par les documents
+      if (id.includes(":")) continue;
       const doc = docs.get(id);
       if (!doc || !isManaged(doc) || doc.path !== entry.path) this.#release(id);
     }
@@ -181,6 +184,12 @@ export class SpatialEngine {
       if (!isManaged(doc)) continue;
       seen.add(doc.id);
       this.#updateSound(doc, darkness);
+    }
+    // Sources d'autres modules (flammes d'Ember…)
+    this.external = providerSources();
+    for (const src of this.external) {
+      seen.add(src.key);
+      this.#updateSource(src.key, this.#externalSpec(src));
     }
     for (const id of [...this.entries.keys()]) if (!seen.has(id)) this.#release(id);
     for (const shot of this.oneShots) this.#updateOneShot(shot);
@@ -308,23 +317,64 @@ export class SpatialEngine {
     };
   }
 
+  /** Un son d'ambiance de Foundry. */
   #updateSound(doc, darkness) {
     const s = soundSettings(doc);
-    const patchId = soundPatch(doc);
+    this.#updateSource(doc.id, {
+      path: doc.path,
+      patchId: soundPatch(doc),
+      x: doc.x,
+      y: doc.y,
+      elevation: doc.elevation ?? 0,
+      radius: this.#radius(doc),
+      size: Math.max(0.25, Number(s.size) || 1),
+      walls: doc.walls !== false,
+      easing: doc.easing !== false,
+      directional: s.directional !== false,
+      volume: Number.isFinite(doc.volume) ? doc.volume : 0.5,
+      intensity: Number.isFinite(s.intensity) ? s.intensity : null,
+      repeat: !!doc.repeat,
+      audible: this.#audible(doc, darkness)
+    });
+  }
+
+  /** Une source fournie par un autre module (providers.js). */
+  #externalSpec(src) {
+    return {
+      path: src.src ?? null,
+      patchId: src.patch && getPatch(src.patch) ? src.patch : null,
+      x: src.x,
+      y: src.y,
+      elevation: src.elevation,
+      radius: src.radius * this.metrics.size,
+      size: src.size,
+      walls: src.walls,
+      easing: true,
+      directional: src.directional,
+      volume: src.volume,
+      intensity: src.intensity,
+      repeat: true,
+      audible: src.audible && (!!src.src || !!(src.patch && getPatch(src.patch)))
+    };
+  }
+
+  /** Joue (ou fait taire) une source : son d'ambiance ou source externe. */
+  #updateSource(key, spec) {
+    const patchId = spec.patchId;
     const signature = patchId ? patchSignature(patchId) : null;
-    let entry = this.entries.get(doc.id);
+    let entry = this.entries.get(key);
     // Recette changée (modifiée dans l'atelier, ou autre recette choisie) : on relance le son
-    if (entry && entry.signature !== signature) {
-      this.#release(doc.id, 0.3);
+    if (entry && (entry.signature !== signature || entry.path !== spec.path)) {
+      this.#release(key, 0.3);
       entry = null;
     }
     if (!entry) {
-      entry = { path: doc.path, voice: null, loading: false, played: false, caches: [], signature, patchId };
-      this.entries.set(doc.id, entry);
+      entry = { path: spec.path, voice: null, loading: false, played: false, caches: [], signature, patchId };
+      this.entries.set(key, entry);
     }
-    const radius = this.#radius(doc);
-    const src = { x: doc.x, y: doc.y, elevation: doc.elevation ?? 0 };
-    const audible = this.#audible(doc, darkness) && radius > 0;
+    const radius = spec.radius;
+    const src = { x: spec.x, y: spec.y, elevation: spec.elevation ?? 0 };
+    const audible = spec.audible && radius > 0;
 
     // Meilleur auditeur pour cette source
     let best = null;
@@ -334,11 +384,11 @@ export class SpatialEngine {
         entry.caches[i] ??= {};
         const h = this.hear(l, src, {
           radius,
-          size: Math.max(0.25, Number(s.size) || 1),
-          walls: doc.walls !== false,
-          easing: doc.easing !== false,
-          directional: s.directional !== false,
-          volume: Number.isFinite(doc.volume) ? doc.volume : 0.5,
+          size: spec.size,
+          walls: spec.walls,
+          easing: spec.easing,
+          directional: spec.directional,
+          volume: spec.volume,
           cache: entry.caches[i]
         });
         nearest = Math.min(nearest, h.d);
@@ -354,13 +404,13 @@ export class SpatialEngine {
       }
       // Un son joué une seule fois peut rejouer quand on revient
       if (nearest >= radius) entry.played = false;
-      if (!patchId && nearest < radius * PRELOAD && !entry.loading) this.out.load(doc.path);
+      if (!patchId && spec.path && nearest < radius * PRELOAD && !entry.loading) this.out.load(spec.path);
       return;
     }
 
     if (patchId) {
       // Son procédural : calculé en direct, toujours en continu
-      const intensity = patchIntensity(getPatch(patchId), this.worldState, Number.isFinite(s.intensity) ? s.intensity : null);
+      const intensity = patchIntensity(getPatch(patchId), this.worldState, spec.intensity);
       if (!entry.voice) {
         const player = createSynth(this.out.ctx, patchId);
         player.setIntensity(intensity);
@@ -377,13 +427,14 @@ export class SpatialEngine {
       return;
     }
 
-    if (!entry.voice && !entry.loading && !(entry.played && !doc.repeat)) {
+    if (!spec.path) return;
+    if (!entry.voice && !entry.loading && !(entry.played && !spec.repeat)) {
       entry.loading = true;
-      this.out.load(doc.path).then((buffer) => {
+      this.out.load(spec.path).then((buffer) => {
         entry.loading = false;
-        if (!buffer || this.entries.get(doc.id) !== entry || entry.voice) return;
+        if (!buffer || this.entries.get(key) !== entry || entry.voice) return;
         entry.voice = new Voice(this.out, buffer, {
-          loop: !!doc.repeat,
+          loop: !!spec.repeat,
           panning: setting("panning", "hrtf"),
           onEnded: (v) => {
             if (entry.voice === v) entry.voice = null;
@@ -415,16 +466,28 @@ export class SpatialEngine {
    * @param {number} [opts.volume]
    * @param {boolean} [opts.walls]
    */
-  async playAt(src, origin, { radius = null, volume = 0.8, walls = true } = {}) {
+  async playAt(src, origin, options = {}) {
     if (!this.out.ctx || !canvas.ready) return null;
     const buffer = await this.out.load(src);
     if (!buffer) return null;
-    const px = radius ? radius * this.metrics.distancePixels : this.metrics.size * 30;
+    return this.playBuffer(buffer, origin, options);
+  }
+
+  /**
+   * Joue un son déjà en mémoire (fichier décodé ou son fabriqué : tonnerre, bouffée) depuis un point.
+   * @param {AudioBuffer} buffer
+   * @param {{x:number,y:number,elevation?:number}} origin
+   * @param {object} [opts]  radius (unités de la scène), radiusCells (cases), volume, walls, rate
+   */
+  playBuffer(buffer, origin, { radius = null, radiusCells = null, volume = 0.8, walls = true, rate = 1 } = {}) {
+    if (!this.out.ctx || !canvas.ready || !buffer) return null;
+    const px = radiusCells ? radiusCells * this.metrics.size : radius ? radius * this.metrics.distancePixels : this.metrics.size * 30;
     const shot = { origin: { x: origin.x, y: origin.y, elevation: origin.elevation ?? 0 }, radius: px, volume, walls, caches: [], voice: null };
     const params = this.#hearShot(shot);
     if (!params || params.gain <= SILENT) return null;
     shot.voice = new Voice(this.out, buffer, {
       loop: false,
+      rate,
       panning: setting("panning", "hrtf"),
       onEnded: () => this.oneShots.delete(shot)
     });

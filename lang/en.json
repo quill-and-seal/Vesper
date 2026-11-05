@@ -72,6 +72,10 @@
       "soundscape": {
         "Name": "Soundscape",
         "Hint": "Uncheck to stop hearing ambience layers (on this computer)."
+      },
+      "emberSounds": {
+        "Name": "Ember sounds",
+        "Hint": "With Ember active: Ember's fires, torches and candles crackle where they are, its rain and wind are heard with no setup (a layer with the same sound in the soundscape replaces them), and thunder follows its lightning."
       }
     },
     "Place": {
@@ -468,6 +472,13 @@
       "Back": "Back",
       "Always": "Always",
       "DropHint": "Drop the sound where you want it"
+    },
+    "Ember": {
+      "Layer": {
+        "rain": "Ember rain",
+        "wind": "Ember wind"
+      },
+      "LayerHint": "Automatic (“Ember sounds” setting)"
     }
   }
 }
